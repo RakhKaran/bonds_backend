@@ -9,6 +9,13 @@ import {RestApplication} from '@loopback/rest';
 import {ServiceMixin} from '@loopback/service-proxy';
 import path from 'path';
 import {MySequence} from './sequence';
+import {BcryptHasher} from './services/hash.password.bcrypt';
+import {JWTService} from './services/jwt-service';
+import {MyUserService} from './services/user-service';
+import {EmailService} from './services/email.service';
+import {EmailManagerBindings} from './keys';
+import {registerAuthenticationStrategy} from '@loopback/authentication';
+import {JWTStrategy} from './authentication-strategy/jwt-strategy';
 
 export {ApplicationConfig};
 
@@ -29,6 +36,7 @@ export class BondsBackendApplication extends BootMixin(
       path: '/explorer',
     });
     this.component(RestExplorerComponent);
+    registerAuthenticationStrategy(this, JWTStrategy);
 
     this.projectRoot = __dirname;
     // Customize @loopback/boot Booter Conventions here
@@ -40,5 +48,14 @@ export class BondsBackendApplication extends BootMixin(
         nested: true,
       },
     };
+  }
+
+  setUpBinding(): void {
+    this.bind('service.hasher').toClass(BcryptHasher);
+    this.bind('jwt.secret').to(process.env.JWT_SECRET!);
+    this.bind('jwt.expiresIn').to(process.env.JWT_EXPIRES_IN ?? '7h');
+    this.bind('service.jwt.service').toClass(JWTService);
+    this.bind('service.user.service').toClass(MyUserService);
+    this.bind(EmailManagerBindings.SEND_MAIL).toClass(EmailService);
   }
 }
