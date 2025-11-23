@@ -13,7 +13,9 @@ export async function migrate(args: string[]) {
       'Roles',
       'Permissions',
       'RolePermissions',
-      'UserRoles'
+      'UserRoles',
+      'Otp',
+      'RegistrationSessions',
     ]
   });
 
