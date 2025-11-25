@@ -6,3 +6,8 @@ export * from './user-roles.model';
 export * from './otp.model';
 export * from './registration-sessions.model';
 export * from './company-profiles.model';
+export * from './media.model';
+export * from './company-pan-cards.model';
+export * from './kyc-applications.model';
+export * from './company-entity-type.model';
+export * from './company-sector-type.model';

@@ -14,8 +14,14 @@ export async function migrate(args: string[]) {
       'Permissions',
       'RolePermissions',
       'UserRoles',
+      'Media',
       'Otp',
       'RegistrationSessions',
+      'CompanyProfiles',
+      'CompanyPanCards',
+      'KycApplications',
+      'CompanySectorType',
+      'CompanyEntityType'
     ]
   });
 

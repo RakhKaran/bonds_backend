@@ -1,23 +1,23 @@
+import {AuthenticationComponent, registerAuthenticationStrategy} from '@loopback/authentication';
 import {BootMixin} from '@loopback/boot';
 import {ApplicationConfig} from '@loopback/core';
+import {RepositoryMixin} from '@loopback/repository';
+import {RestApplication} from '@loopback/rest';
 import {
   RestExplorerBindings,
   RestExplorerComponent,
 } from '@loopback/rest-explorer';
-import {RepositoryMixin} from '@loopback/repository';
-import {RestApplication} from '@loopback/rest';
 import {ServiceMixin} from '@loopback/service-proxy';
+import multer from 'multer';
 import path from 'path';
+import {JWTStrategy} from './authentication-strategy/jwt-strategy';
+import {EmailManagerBindings, FILE_UPLOAD_SERVICE, STORAGE_DIRECTORY} from './keys';
 import {MySequence} from './sequence';
+import {EmailService} from './services/email.service';
 import {BcryptHasher} from './services/hash.password.bcrypt';
 import {JWTService} from './services/jwt-service';
-import {MyUserService} from './services/user-service';
-import {EmailService} from './services/email.service';
-import {EmailManagerBindings, FILE_UPLOAD_SERVICE, STORAGE_DIRECTORY} from './keys';
-import {AuthenticationComponent, registerAuthenticationStrategy} from '@loopback/authentication';
-import {JWTStrategy} from './authentication-strategy/jwt-strategy';
 import {RbacService} from './services/rbac.service';
-import multer from 'multer';
+import {MyUserService} from './services/user-service';
 
 export {ApplicationConfig};
 
@@ -41,6 +41,7 @@ export class BondsBackendApplication extends BootMixin(
       path: '/explorer',
     });
     this.component(RestExplorerComponent);
+    this.configureFileUpload(options.fileStorageDirectory);
     registerAuthenticationStrategy(this, JWTStrategy);
 
     this.projectRoot = __dirname;

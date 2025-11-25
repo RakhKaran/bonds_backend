@@ -1,6 +1,7 @@
 import {Entity, model, property, hasMany} from '@loopback/repository';
 import {Roles} from './roles.model';
 import {UserRoles} from './user-roles.model';
+import {KycApplications} from './kyc-applications.model';
 
 @model({
   settings: {
@@ -86,6 +87,8 @@ export class Users extends Entity {
   @hasMany(() => Roles, {through: {model: () => UserRoles}})
   roles: Roles[];
 
+  @hasMany(() => KycApplications)
+  kycApplications: KycApplications[];
   constructor(data?: Partial<Users>) {
     super(data);
   }

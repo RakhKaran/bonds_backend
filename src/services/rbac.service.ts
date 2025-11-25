@@ -1,10 +1,11 @@
-import {injectable, BindingScope} from '@loopback/core';
+import {BindingScope, injectable} from '@loopback/core';
 import {repository} from '@loopback/repository';
 import {
-  UserRolesRepository,
-  RolesRepository,
-  RolePermissionsRepository,
+  CompanyProfilesRepository,
   PermissionsRepository,
+  RolePermissionsRepository,
+  RolesRepository,
+  UserRolesRepository,
   UsersRepository,
 } from '../repositories';
 
@@ -13,6 +14,8 @@ export class RbacService {
   constructor(
     @repository(UsersRepository)
     private usersRepository: UsersRepository,
+    @repository(CompanyProfilesRepository)
+    private companyProfilesRepository: CompanyProfilesRepository,
     @repository(UserRolesRepository)
     private userRolesRepo: UserRolesRepository,
     @repository(RolesRepository)
@@ -95,6 +98,27 @@ export class RbacService {
     const user = await this.usersRepository.findById(userId);
     return {
       fullName: user.fullName,
+      email: user.email,
+      phone: user.phone,
+      isActive: user.isActive,
+      roles,
+      permissions
+    }
+  }
+
+  async returnCompanyProfile(userId: string, roles: string[], permissions: string[]) {
+    const user = await this.usersRepository.findById(userId);
+    const company = await this.companyProfilesRepository.findOne({
+      where: {
+        and: [
+          {usersId: user.id},
+          {isActive: true},
+          {isDeleted: false}
+        ]
+      }
+    });
+    return {
+      companyName: company?.companyName,
       email: user.email,
       phone: user.phone,
       isActive: user.isActive,
