@@ -18,6 +18,7 @@ import {BcryptHasher} from './services/hash.password.bcrypt';
 import {JWTService} from './services/jwt-service';
 import {RbacService} from './services/rbac.service';
 import {MyUserService} from './services/user-service';
+import {DocumentExtractionService} from './services/document-extraction.service';
 
 export {ApplicationConfig};
 
@@ -63,6 +64,7 @@ export class BondsBackendApplication extends BootMixin(
     this.bind('jwt.expiresIn').to(process.env.JWT_EXPIRES_IN ?? '7h');
     this.bind('service.jwt.service').toClass(JWTService);
     this.bind('service.user.service').toClass(MyUserService);
+    this.bind('service.documentExtraction.service').toClass(DocumentExtractionService);
     this.bind(EmailManagerBindings.SEND_MAIL).toClass(EmailService);
   }
 
