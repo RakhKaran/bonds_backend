@@ -1,5 +1,6 @@
 import {BindingScope, injectable} from '@loopback/core';
 import {repository} from '@loopback/repository';
+import {HttpErrors} from '@loopback/rest';
 import {
   CompanyProfilesRepository,
   PermissionsRepository,
@@ -91,6 +92,31 @@ export class RbacService {
       roles: [roleValue],
       permissions: permissionValues,
     };
+  }
+
+  async assignNewUserRole(userId: string, roleValue: string) {
+    const role = await this.rolesRepo.findOne({
+      where: {
+        value: roleValue
+      }
+    });
+
+    if (!role) {
+      throw new HttpErrors.NotFound('No role found with given role');
+    }
+
+    const newRole = await this.userRolesRepo.create({
+      usersId: userId,
+      rolesId: role.id,
+      isActive: true,
+      isDeleted: false
+    });
+
+    return {
+      success: true,
+      message: 'Role is assigned to user',
+      data: newRole
+    }
   }
 
   // -------------------------------------------Return profiles--------------------------------------
