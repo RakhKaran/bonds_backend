@@ -4,11 +4,10 @@ import {repository} from '@loopback/repository';
 import {HttpErrors, patch, post, requestBody} from '@loopback/rest';
 import {securityId, UserProfile} from '@loopback/security';
 import {authorize} from '../authorization';
-import {FILE_UPLOAD_SERVICE} from '../keys';
 import {CompanyPanCardsRepository, CompanyProfilesRepository, KycApplicationsRepository, OtpRepository, RegistrationSessionsRepository, RolesRepository, UserRolesRepository, UsersRepository} from '../repositories';
-import {FileUploadProvider} from '../services/file-upload.service';
 import {BcryptHasher} from '../services/hash.password.bcrypt';
 import {JWTService} from '../services/jwt-service';
+import {MediaService} from '../services/media.service';
 import {RbacService} from '../services/rbac.service';
 import {MyUserService} from '../services/user-service';
 
@@ -38,8 +37,8 @@ export class AuthController {
     public jwtService: JWTService,
     @inject('services.rbac')
     public rbacService: RbacService,
-    @inject(FILE_UPLOAD_SERVICE)
-    private fileUploadProvider: FileUploadProvider
+    @inject('service.media.service')
+    private mediaService: MediaService
   ) { }
 
   // ---------------------------------------Super Admin Auth API's------------------------------------
@@ -861,7 +860,7 @@ export class AuthController {
           {transaction: tx}
         );
 
-        await this.fileUploadProvider.updateMediaUsedStatus([body.panCardDocumentId], true);
+        await this.mediaService.updateMediaUsedStatus([body.panCardDocumentId], true);
         const result = await this.rbacService.assignNewUserRole(newUserProfile.id, 'company');
         if (!result.success || !result.data) {
           if (process.env.NODE_ENV === 'dev') {
@@ -923,7 +922,7 @@ export class AuthController {
         {transaction: tx}
       );
 
-      await this.fileUploadProvider.updateMediaUsedStatus([body.panCardDocumentId], true);
+      await this.mediaService.updateMediaUsedStatus([body.panCardDocumentId], true);
       const result = await this.rbacService.assignNewUserRole(newUserProfile.id, 'company');
       if (!result.success || !result.data) {
         if (process.env.NODE_ENV === 'dev') {

@@ -5,10 +5,8 @@ import {
   injectable,
   Provider,
 } from '@loopback/core';
-import {repository} from '@loopback/repository';
 import multer from 'multer';
 import {FILE_UPLOAD_SERVICE} from '../keys';
-import {MediaRepository} from '../repositories';
 import {FileUploadHandler} from '../types';
 
 /**
@@ -21,8 +19,6 @@ import {FileUploadHandler} from '../types';
 export class FileUploadProvider implements Provider<FileUploadHandler> {
   constructor(
     @config() private options: multer.Options = {},
-    @repository(MediaRepository)
-    private mediaRepository: MediaRepository
   ) {
     if (!this.options.storage) {
       // Default to disk storage with the filename containing a timestamp
@@ -39,23 +35,5 @@ export class FileUploadProvider implements Provider<FileUploadHandler> {
 
   value(): FileUploadHandler {
     return multer(this.options).any();
-  }
-
-  async updateMediaUsedStatus(mediaIds: string[], usedStatus: boolean) {
-    try {
-      if (!mediaIds || mediaIds.length === 0) {
-        return;
-      }
-
-      for (const id of mediaIds) {
-        await this.mediaRepository.updateById(id, {isUsed: usedStatus});
-      };
-
-      return;
-    } catch (error) {
-      console.log('error while updating used status for file of ids: ', mediaIds);
-      console.log('error', error);
-      return;
-    }
   }
 }
