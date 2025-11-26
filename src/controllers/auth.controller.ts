@@ -861,6 +861,16 @@ export class AuthController {
           {transaction: tx}
         );
 
+        await this.fileUploadProvider.updateMediaUsedStatus([body.panCardDocumentId], true);
+        const result = await this.rbacService.assignNewUserRole(newUserProfile.id, 'company');
+        if (!result.success || !result.data) {
+          if (process.env.NODE_ENV === 'dev') {
+            throw new HttpErrors.InternalServerError('Error while assigning role to user');
+          } else {
+            throw new HttpErrors.InternalServerError('Internal server error');
+          }
+        }
+        console.log('result', result.data);
         await tx.commit();
 
         return {
@@ -922,6 +932,7 @@ export class AuthController {
           throw new HttpErrors.InternalServerError('Internal server error');
         }
       }
+      console.log('result', result.data);
       await tx.commit();
 
       return {
