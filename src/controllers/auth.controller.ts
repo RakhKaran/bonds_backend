@@ -1051,11 +1051,9 @@ export class AuthController {
         'application/json': {
           schema: {
             type: 'object',
-            required: ['userId', 'roleValue', 'identifierId', 'status'],
+            required: ['applicationId', 'status'],
             properties: {
-              userId: {type: 'string'},
-              roleValue: {type: 'string'},
-              identifierId: {type: 'string'},
+              applicationId: {type: 'string'},
               status: {type: 'number'}
             }
           }
@@ -1063,9 +1061,7 @@ export class AuthController {
       }
     })
     body: {
-      userId: string;
-      roleValue: string;
-      identifierId: string;
+      applicationId: string;
       status: number;
     }
   ): Promise<{success: boolean; message: string}> {
@@ -1079,8 +1075,7 @@ export class AuthController {
         {
           where: {
             and: [
-              {usersId: body.userId},
-              {roleValue: body.roleValue},
+              {id: body.applicationId},
               {isActive: true},
               {isDeleted: false}
             ]
@@ -1099,7 +1094,7 @@ export class AuthController {
       if (kycApplication.roleValue === 'company') {
         result = await this.handleCompanyKycApplication(
           kycApplication.id,
-          body.identifierId,
+          kycApplication.identifierId,
           body.status,
           tx
         );

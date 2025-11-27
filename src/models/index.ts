@@ -11,3 +11,7 @@ export * from './company-pan-cards.model';
 export * from './kyc-applications.model';
 export * from './company-entity-type.model';
 export * from './company-sector-type.model';
+export * from './bond-estimations.model';
+export * from './estimation-credit-ratings.model';
+export * from './credit-ratings.model';
+export * from './credit-rating-agencies.model';

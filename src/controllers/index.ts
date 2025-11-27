@@ -5,3 +5,7 @@ export * from './auth.controller';
 export * from './company-entity-type.controller';
 export * from './company-sector-type.controller';
 export * from './document-extraction.controller';
+export * from './credit-rating-agencies.controller';
+export * from './credit-ratings.controller';
+export * from './companies.controller';
+export * from './company-profiles-kyc-applications.controller';

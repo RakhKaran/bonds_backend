@@ -1,9 +1,11 @@
-import {belongsTo, Entity, model, property, hasOne} from '@loopback/repository';
+import {belongsTo, Entity, model, property, hasOne, hasMany} from '@loopback/repository';
 import {Media} from './media.model';
 import {CompanyPanCards} from './company-pan-cards.model';
 import {Users} from './users.model';
 import {CompanyEntityType} from './company-entity-type.model';
 import {CompanySectorType} from './company-sector-type.model';
+import {BondEstimations} from './bond-estimations.model';
+import {KycApplications} from './kyc-applications.model';
 
 @model({
   settings: {
@@ -178,6 +180,12 @@ export class CompanyProfiles extends Entity {
 
   @belongsTo(() => CompanySectorType)
   companySectorTypeId: string;
+
+  @hasMany(() => BondEstimations)
+  bondEstimations: BondEstimations[];
+
+  @belongsTo(() => KycApplications)
+  kycApplicationsId: string;
 
   constructor(data?: Partial<CompanyProfiles>) {
     super(data);

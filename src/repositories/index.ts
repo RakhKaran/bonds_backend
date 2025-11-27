@@ -11,3 +11,7 @@ export * from './company-pan-cards.repository';
 export * from './kyc-applications.repository';
 export * from './company-entity-type.repository';
 export * from './company-sector-type.repository';
+export * from './bond-estimations.repository';
+export * from './estimation-credit-ratings.repository';
+export * from './credit-ratings.repository';
+export * from './credit-rating-agencies.repository';
