@@ -24,6 +24,8 @@ export async function migrate(args: string[]) {
       'CompanyEntityType',
       'CreditRatings',
       'CreditRatingAgencies',
+      'BondEstimations',
+      'EstimationCreditRatings'
     ]
   });
 
