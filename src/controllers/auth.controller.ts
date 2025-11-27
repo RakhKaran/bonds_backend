@@ -1,8 +1,9 @@
 import {authenticate, AuthenticationBindings} from '@loopback/authentication';
 import {inject} from '@loopback/core';
 import {repository} from '@loopback/repository';
-import {HttpErrors, patch, post, requestBody} from '@loopback/rest';
+import {get, HttpErrors, patch, post, requestBody} from '@loopback/rest';
 import {securityId, UserProfile} from '@loopback/security';
+import _ from 'lodash';
 import {authorize} from '../authorization';
 import {CompanyPanCardsRepository, CompanyProfilesRepository, KycApplicationsRepository, OtpRepository, RegistrationSessionsRepository, RolesRepository, UserRolesRepository, UsersRepository} from '../repositories';
 import {BcryptHasher} from '../services/hash.password.bcrypt';
@@ -223,6 +224,23 @@ export class AuthController {
       success: true,
       message: "Password updated successfully"
     }
+  }
+
+  @authenticate('jwt')
+  @get('/auth/me')
+  async whoAmI(
+    @inject(AuthenticationBindings.CURRENT_USER) currnetUser: UserProfile,
+  ): Promise<{}> {
+    console.log(currnetUser);
+    const user = await this.usersRepository.findOne({
+      where: {
+        id: currnetUser.id,
+      },
+    });
+    const userData = _.omit(user, 'password');
+    return Promise.resolve({
+      ...userData,
+    });
   }
 
   // -----------------------------------------registration verification Otp's------------------------
