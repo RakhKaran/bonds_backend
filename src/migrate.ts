@@ -21,7 +21,9 @@ export async function migrate(args: string[]) {
       'CompanyPanCards',
       'KycApplications',
       'CompanySectorType',
-      'CompanyEntityType'
+      'CompanyEntityType',
+      'CreditRatings',
+      'CreditRatingAgencies',
     ]
   });
 
