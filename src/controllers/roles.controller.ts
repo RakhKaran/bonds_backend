@@ -1,21 +1,26 @@
+import {authenticate} from '@loopback/authentication';
 import {
   repository,
 } from '@loopback/repository';
 import {
-  post,
+  get,
   getModelSchemaRef,
+  post,
   requestBody,
   response,
 } from '@loopback/rest';
+import {authorize} from '../authorization';
 import {Roles} from '../models';
 import {RolesRepository} from '../repositories';
 
 export class RolesController {
   constructor(
     @repository(RolesRepository)
-    public rolesRepository : RolesRepository,
-  ) {}
+    public rolesRepository: RolesRepository,
+  ) { }
 
+  @authenticate('jwt')
+  @authorize({roles: ['super_admin']})
   @post('/roles')
   @response(200, {
     description: 'Roles model instance',
@@ -48,23 +53,25 @@ export class RolesController {
   //   return this.rolesRepository.count(where);
   // }
 
-  // @get('/roles')
-  // @response(200, {
-  //   description: 'Array of Roles model instances',
-  //   content: {
-  //     'application/json': {
-  //       schema: {
-  //         type: 'array',
-  //         items: getModelSchemaRef(Roles, {includeRelations: true}),
-  //       },
-  //     },
-  //   },
-  // })
-  // async find(
-  //   @param.filter(Roles) filter?: Filter<Roles>,
-  // ): Promise<Roles[]> {
-  //   return this.rolesRepository.find(filter);
-  // }
+  @authenticate('jwt')
+  @authorize({roles: ['super_admin']})
+  @get('/roles')
+  @response(200, {
+    description: 'Array of Roles model instances',
+    content: {
+      'application/json': {
+        schema: {
+          type: 'array',
+          items: getModelSchemaRef(Roles, {includeRelations: true}),
+        },
+      },
+    },
+  })
+  async find(
+    @param.filter(Roles) filter?: Filter<Roles>,
+  ): Promise<Roles[]> {
+    return this.rolesRepository.find(filter);
+  }
 
   // @patch('/roles')
   // @response(200, {
