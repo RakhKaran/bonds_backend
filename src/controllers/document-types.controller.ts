@@ -19,12 +19,14 @@ import {
 } from '@loopback/rest';
 import {authorize} from '../authorization';
 import {DocumentTypes} from '../models';
-import {DocumentTypesRepository} from '../repositories';
+import {DocumentPlaceholdersRepository, DocumentTypesRepository} from '../repositories';
 
 export class DocumentTypesController {
   constructor(
     @repository(DocumentTypesRepository)
     public documentTypesRepository: DocumentTypesRepository,
+    @repository(DocumentPlaceholdersRepository)
+    public documentPlaceholdersRepository: DocumentPlaceholdersRepository
   ) { }
 
   @authenticate('jwt')
@@ -50,12 +52,36 @@ export class DocumentTypesController {
             type: 'array',
             items: {type: 'string'}
           },
+          documentPlaceholders: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                fieldValue: {type: 'string'},
+                fieldName: {type: 'string'},
+                isRequired: {type: 'string'},
+                description: {type: 'string'},
+                isActive: {type: 'boolean'},
+                isDeleted: {type: 'boolean'}
+              }
+            }
+          }
         },
       },
     })
-    documentTypes: Omit<DocumentTypes, 'id'> & {roles: string[]},
+    documentTypes: Omit<DocumentTypes, 'id'> & {
+      roles: string[],
+      documentPlaceholders: Array<{
+        fieldName: string;
+        fieldValue: string;
+        isRequired: boolean;
+        description: string;
+        isActive: boolean;
+        isDeleted: boolean;
+      }>
+    },
   ): Promise<DocumentTypes> {
-    const {roles, ...documentData} = documentTypes;
+    const {roles, documentPlaceholders, ...documentData} = documentTypes;
     const existingDocument = await this.documentTypesRepository.findOne({where: {value: documentData.value}});
     if (existingDocument) {
       throw new HttpErrors.BadRequest('Same document already exist');
@@ -64,6 +90,10 @@ export class DocumentTypesController {
     if (newDocumentType) {
       for (const roleId of roles) {
         await this.documentTypesRepository.roles(newDocumentType.id).link(roleId);
+      }
+
+      for (const documentPlaceholderData of documentPlaceholders) {
+        await this.documentTypesRepository.documentPlaceholders(newDocumentType.id).create(documentPlaceholderData);
       }
     }
 
@@ -186,21 +216,48 @@ export class DocumentTypesController {
           roles: {
             type: 'array',
             items: {type: 'string'}
+          },
+          documentPlaceholders: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                fieldValue: {type: 'string'},
+                fieldName: {type: 'string'},
+                isRequired: {type: 'string'},
+                description: {type: 'string'},
+                isActive: {type: 'boolean'},
+                isDeleted: {type: 'boolean'}
+              }
+            }
           }
         },
       },
     })
-    documentTypes: DocumentTypes & {roles: string[]},
+    documentTypes: DocumentTypes & {
+      roles: string[],
+      documentPlaceholders: Array<{
+        fieldName: string;
+        fieldValue: string;
+        isRequired: boolean;
+        description: string;
+        isActive: boolean;
+        isDeleted: boolean;
+      }>
+    },
   ): Promise<void> {
-    const {roles, ...documentTypesData} = documentTypes;
+    const {roles, documentPlaceholders, ...documentTypesData} = documentTypes;
     await this.documentTypesRepository.updateById(id, documentTypesData);
 
-    for (const roleId of roles) {
-      await this.documentTypesRepository.roles(id).unlink(roleId);
-    }
-
+    await this.documentTypesRepository.roles(id).unlinkAll();
     for (const roleId of roles) {
       await this.documentTypesRepository.roles(id).link(roleId);
+    }
+
+    await this.documentTypesRepository.documentPlaceholders(id).delete();
+
+    for (const placeholder of documentPlaceholders) {
+      await this.documentTypesRepository.documentPlaceholders(id).create(placeholder);
     }
   }
 
