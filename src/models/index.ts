@@ -18,3 +18,5 @@ export * from './credit-rating-agencies.model';
 export * from './document-types.model';
 export * from './document-placeholders.model';
 export * from './document-roles.model';
+export * from './trustee-profiles.model';
+export * from './trustee-pan-cards.model';

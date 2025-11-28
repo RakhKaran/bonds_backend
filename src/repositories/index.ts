@@ -18,3 +18,5 @@ export * from './credit-rating-agencies.repository';
 export * from './document-types.repository';
 export * from './document-placeholders.repository';
 export * from './document-roles.repository';
+export * from './trustee-profiles.repository';
+export * from './trustee-pan-cards.repository';

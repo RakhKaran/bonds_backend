@@ -28,7 +28,9 @@ export async function migrate(args: string[]) {
       'EstimationCreditRatings',
       'DocumentTypes',
       'DocumentPlaceholders',
-      'DocumentRoles'
+      'DocumentRoles',
+      'TrusteeProfiles',
+      'TrusteePanCards'
     ]
   });
 
