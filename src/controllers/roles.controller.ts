@@ -1,10 +1,12 @@
 import {authenticate} from '@loopback/authentication';
 import {
+  Filter,
   repository,
 } from '@loopback/repository';
 import {
   get,
   getModelSchemaRef,
+  param,
   post,
   requestBody,
   response,
