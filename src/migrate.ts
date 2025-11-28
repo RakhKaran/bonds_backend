@@ -30,6 +30,7 @@ export async function migrate(args: string[]) {
       'DocumentPlaceholders',
       'DocumentRoles',
       'TrusteeProfiles',
+      'TrusteeEntityTypes',
       'TrusteePanCards'
     ]
   });

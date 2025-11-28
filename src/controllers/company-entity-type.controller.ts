@@ -8,13 +8,11 @@ import {
   Where,
 } from '@loopback/repository';
 import {
-  del,
   get,
   getModelSchemaRef,
   param,
   patch,
   post,
-  put,
   requestBody,
   response,
 } from '@loopback/rest';
@@ -137,26 +135,26 @@ export class CompanyEntityTypeController {
     await this.companyEntityTypeRepository.updateById(id, companyEntityType);
   }
 
-  @authenticate('jwt')
-  @authorize({roles: ['super_admin']})
-  @put('/company-entity-types/{id}')
-  @response(204, {
-    description: 'CompanyEntityType PUT success',
-  })
-  async replaceById(
-    @param.path.string('id') id: string,
-    @requestBody() companyEntityType: CompanyEntityType,
-  ): Promise<void> {
-    await this.companyEntityTypeRepository.replaceById(id, companyEntityType);
-  }
+  // @authenticate('jwt')
+  // @authorize({roles: ['super_admin']})
+  // @put('/company-entity-types/{id}')
+  // @response(204, {
+  //   description: 'CompanyEntityType PUT success',
+  // })
+  // async replaceById(
+  //   @param.path.string('id') id: string,
+  //   @requestBody() companyEntityType: CompanyEntityType,
+  // ): Promise<void> {
+  //   await this.companyEntityTypeRepository.replaceById(id, companyEntityType);
+  // }
 
-  @authenticate('jwt')
-  @authorize({roles: ['super_admin']})
-  @del('/company-entity-types/{id}')
-  @response(204, {
-    description: 'CompanyEntityType DELETE success',
-  })
-  async deleteById(@param.path.string('id') id: string): Promise<void> {
-    await this.companyEntityTypeRepository.deleteById(id);
-  }
+  // @authenticate('jwt')
+  // @authorize({roles: ['super_admin']})
+  // @del('/company-entity-types/{id}')
+  // @response(204, {
+  //   description: 'CompanyEntityType DELETE success',
+  // })
+  // async deleteById(@param.path.string('id') id: string): Promise<void> {
+  //   await this.companyEntityTypeRepository.deleteById(id);
+  // }
 }

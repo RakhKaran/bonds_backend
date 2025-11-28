@@ -8,13 +8,11 @@ import {
   Where,
 } from '@loopback/repository';
 import {
-  del,
   get,
   getModelSchemaRef,
   param,
   patch,
   post,
-  put,
   requestBody,
   response,
 } from '@loopback/rest';
@@ -137,26 +135,26 @@ export class CompanySectorTypeController {
     await this.companySectorTypeRepository.updateById(id, companySectorType);
   }
 
-  @authenticate('jwt')
-  @authorize({roles: ['super_admin']})
-  @put('/company-sector-types/{id}')
-  @response(204, {
-    description: 'CompanySectorType PUT success',
-  })
-  async replaceById(
-    @param.path.string('id') id: string,
-    @requestBody() companySectorType: CompanySectorType,
-  ): Promise<void> {
-    await this.companySectorTypeRepository.replaceById(id, companySectorType);
-  }
+  // @authenticate('jwt')
+  // @authorize({roles: ['super_admin']})
+  // @put('/company-sector-types/{id}')
+  // @response(204, {
+  //   description: 'CompanySectorType PUT success',
+  // })
+  // async replaceById(
+  //   @param.path.string('id') id: string,
+  //   @requestBody() companySectorType: CompanySectorType,
+  // ): Promise<void> {
+  //   await this.companySectorTypeRepository.replaceById(id, companySectorType);
+  // }
 
-  @authenticate('jwt')
-  @authorize({roles: ['super_admin']})
-  @del('/company-sector-types/{id}')
-  @response(204, {
-    description: 'CompanySectorType DELETE success',
-  })
-  async deleteById(@param.path.string('id') id: string): Promise<void> {
-    await this.companySectorTypeRepository.deleteById(id);
-  }
+  // @authenticate('jwt')
+  // @authorize({roles: ['super_admin']})
+  // @del('/company-sector-types/{id}')
+  // @response(204, {
+  //   description: 'CompanySectorType DELETE success',
+  // })
+  // async deleteById(@param.path.string('id') id: string): Promise<void> {
+  //   await this.companySectorTypeRepository.deleteById(id);
+  // }
 }

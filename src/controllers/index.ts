@@ -9,3 +9,4 @@ export * from './document-types.controller';
 export * from './permissions.controller';
 export * from './ping.controller';
 export * from './roles.controller';
+export * from './trustee-entity-types.controller';

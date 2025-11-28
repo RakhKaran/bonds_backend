@@ -5,7 +5,7 @@ import {get, HttpErrors, patch, post, requestBody} from '@loopback/rest';
 import {securityId, UserProfile} from '@loopback/security';
 import _ from 'lodash';
 import {authorize} from '../authorization';
-import {CompanyPanCardsRepository, CompanyProfilesRepository, KycApplicationsRepository, OtpRepository, RegistrationSessionsRepository, RolesRepository, UserRolesRepository, UsersRepository} from '../repositories';
+import {CompanyPanCardsRepository, CompanyProfilesRepository, KycApplicationsRepository, OtpRepository, RegistrationSessionsRepository, RolesRepository, TrusteePanCardsRepository, TrusteeProfilesRepository, UserRolesRepository, UsersRepository} from '../repositories';
 import {BcryptHasher} from '../services/hash.password.bcrypt';
 import {JWTService} from '../services/jwt-service';
 import {MediaService} from '../services/media.service';
@@ -28,6 +28,10 @@ export class AuthController {
     private companyProfilesRepository: CompanyProfilesRepository,
     @repository(CompanyPanCardsRepository)
     private companyPanCardsRepository: CompanyPanCardsRepository,
+    @repository(TrusteeProfilesRepository)
+    private trusteeProfilesRepository: TrusteeProfilesRepository,
+    @repository(TrusteePanCardsRepository)
+    private trusteePanCardsRepository: TrusteePanCardsRepository,
     @repository(KycApplicationsRepository)
     private kycApplicationsRepository: KycApplicationsRepository,
     @inject('service.hasher')
@@ -1040,6 +1044,432 @@ export class AuthController {
       user: profile
     };
   }
+
+  // ------------------------------------------Company Registration API's------------------------------
+  @post('/auth/trustee-registration')
+  async trusteeRegistration(
+    @requestBody({
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            required: [
+              'sessionId',
+              'password',
+              'legalEntityName',
+              'CIN',
+              // 'GSTIN',
+              // 'udyamRegistrationNumber',
+              'dateOfIncorporation',
+              'cityOfIncorporation',
+              'stateOfIncorporation',
+              'countryOfIncorporation',
+              'submittedPanDetails',
+              'panCardDocumentId',
+              'trusteeEntityTypesId',
+              // 'companySectorTypeId'
+            ],
+            properties: {
+              sessionId: {
+                type: 'string',
+                description: 'Registration session id'
+              },
+              password: {type: 'string'},
+              legalEntityName: {type: 'string'},
+              CIN: {
+                type: 'string',
+                pattern: '^[A-Z]{1}[0-9]{5}[A-Z]{2}[0-9]{4}[A-Z]{3}[0-9]{6}$'
+              },
+              GSTIN: {
+                type: 'string',
+                minLength: 15,
+                maxLength: 15
+              },
+              udyamRegistrationNumber: {
+                type: 'string'
+              },
+              dateOfIncorporation: {
+                type: 'string',
+                pattern: '^\\d{4}-\\d{2}-\\d{2}$'
+              },
+              cityOfIncorporation: {type: 'string'},
+              stateOfIncorporation: {type: 'string'},
+              countryOfIncorporation: {type: 'string'},
+
+              humanInteraction: {
+                type: 'boolean',
+                default: false
+              },
+              extractedPanDetails: {
+                type: 'object',
+                required: [],
+                properties: {
+                  extractedTrusteeName: {type: 'string'},
+                  extractedPanNumber: {
+                    type: 'string',
+                    pattern: '^[A-Z]{5}[0-9]{4}[A-Z]{1}$'
+                  },
+                  extractedDateOfBirth: {
+                    type: 'string',
+                    pattern: '^\\d{4}-\\d{2}-\\d{2}$'
+                  }
+                }
+              },
+              submittedPanDetails: {
+                type: 'object',
+                required: ['submittedTrusteeName', 'submittedPanNumber', 'submittedDateOfBirth'],
+                properties: {
+                  submittedTrusteeName: {type: 'string'},
+                  submittedPanNumber: {
+                    type: 'string',
+                    pattern: '^[A-Z]{5}[0-9]{4}[A-Z]{1}$'
+                  },
+                  submittedDateOfBirth: {
+                    type: 'string',
+                    pattern: '^\\d{4}-\\d{2}-\\d{2}$'
+                  }
+                }
+              },
+              panCardDocumentId: {
+                type: 'string',
+                description: 'Media ID of uploaded PAN card'
+              },
+              trusteeEntityTypesId: {type: 'string'},
+              // companyEntityTypeId: {type: 'string'},
+            }
+          }
+        }
+      }
+    })
+    body: {
+      sessionId: string;
+      password: string;
+      legalEntityName: string;
+      CIN: string;
+      GSTIN?: string;
+      udyamRegistrationNumber?: string;
+      dateOfIncorporation: string; // yyyy-mm-dd
+      cityOfIncorporation: string;
+      stateOfIncorporation: string;
+      countryOfIncorporation: string;
+      humanInteraction?: boolean;
+      extractedPanDetails?: {
+        extractedTrusteeName?: string;
+        extractedPanNumber?: string;
+        extractedDateOfBirth?: string; // yyyy-mm-dd
+      };
+      submittedPanDetails: {
+        submittedTrusteeName: string;
+        submittedPanNumber: string;
+        submittedDateOfBirth: string; // yyyy-mm-dd
+      };
+      panCardDocumentId: string;
+      trusteeEntityTypesId: string;
+      // companyEntityTypeId: string;
+    }
+  ): Promise<{success: boolean; message: string; kycStatus: number}> {
+    const tx = await this.trusteeProfilesRepository.dataSource.beginTransaction({
+      isolationLevel: 'READ COMMITTED',
+    });
+    try {
+      // ----------------------------
+      //  Validate Registration Session
+      // ----------------------------
+      const registrationSession = await this.registrationSessionsRepository.findById(
+        body.sessionId,
+        undefined,
+        {transaction: tx}
+      );
+
+      if (
+        !registrationSession ||
+        !registrationSession.phoneVerified ||
+        !registrationSession.emailVerified ||
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+        registrationSession.isDeleted ||
+        new Date(registrationSession.expiresAt) < new Date()
+      ) {
+        throw new HttpErrors.BadRequest('Session is not valid');
+      }
+
+      // ----------------------------
+      //  Validate CIN & GSTIN
+      // ----------------------------
+      const companyWithCIN = await this.trusteeProfilesRepository.findOne(
+        {where: {CIN: body.CIN, isDeleted: false}},
+        {transaction: tx}
+      );
+      if (companyWithCIN) throw new HttpErrors.BadRequest('CIN already registered');
+
+      if (body.GSTIN) {
+        const companyWithGSTIN = await this.trusteeProfilesRepository.findOne(
+          {where: {GSTIN: body.GSTIN, isDeleted: false}},
+          {transaction: tx}
+        );
+        if (companyWithGSTIN)
+          throw new HttpErrors.BadRequest('GSTIN already registered');
+      }
+
+      // ----------------------------
+      //  Create User
+      // ----------------------------
+      const hashedPassword = await this.hasher.hashPassword(body.password);
+
+      const newUserProfile = await this.usersRepository.create(
+        {
+          phone: registrationSession.phoneNumber,
+          email: registrationSession.email,
+          password: hashedPassword,
+          isActive: false,
+          isDeleted: false,
+        },
+        {transaction: tx}
+      );
+
+      // ----------------------------
+      //  Create Company Profile
+      // ----------------------------
+      const newTrusteeProfile = await this.trusteeProfilesRepository.create(
+        {
+          usersId: newUserProfile.id,
+          legalEntityName: body.legalEntityName,
+          CIN: body.CIN,
+          ...(body.GSTIN && {GSTIN: body.GSTIN}),
+          dateOfIncorporation: body.dateOfIncorporation,
+          cityOfIncorporation: body.cityOfIncorporation,
+          stateOfIncorporation: body.stateOfIncorporation,
+          countryOfIncorporation: body.countryOfIncorporation,
+          ...(body.udyamRegistrationNumber && {GSTIN: body.udyamRegistrationNumber}),
+          trusteeEntityTypesId: body.trusteeEntityTypesId,
+          isActive: false,
+          isDeleted: false,
+        },
+        {transaction: tx}
+      );
+
+      // ----------------------------
+      //  Check PAN duplicate
+      // ----------------------------
+      const isPanExist = await this.trusteePanCardsRepository.findOne(
+        {
+          where: {
+            and: [
+              {submittedPanNumber: body.submittedPanDetails.submittedPanNumber},
+              {isDeleted: false},
+              {status: 1},
+            ],
+          },
+        },
+        {transaction: tx}
+      );
+
+      if (isPanExist)
+        throw new HttpErrors.BadRequest('Pan already exists with another trustee');
+
+      // ----------------------------
+      //  Prepare PAN Data
+      // ----------------------------
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const trusteePanData: any = {
+        submittedTrusteeName: body.submittedPanDetails.submittedTrusteeName,
+        submittedPanNumber: body.submittedPanDetails.submittedPanNumber,
+        submittedDateOfBirth: body.submittedPanDetails.submittedDateOfBirth,
+        extractedTrusteeName: body.extractedPanDetails?.extractedTrusteeName,
+        extractedPanNumber: body.extractedPanDetails?.extractedPanNumber,
+        extractedDateOfBirth: body.extractedPanDetails?.extractedDateOfBirth,
+        panCardDocumentId: body.panCardDocumentId,
+        mode: body.humanInteraction ? 1 : 0,
+        status: 0,
+        isActive: false,
+        isDeleted: false,
+        trusteeProfilesId: newTrusteeProfile.id,
+      };
+
+      // ----------------------------
+      //  Human Interaction Required
+      // ----------------------------
+      if (body.humanInteraction) {
+        await this.trusteePanCardsRepository.create(trusteePanData, {
+          transaction: tx,
+        });
+
+        await this.kycApplicationsRepository.create(
+          {
+            roleValue: registrationSession.roleValue,
+            usersId: newUserProfile.id,
+            status: 0,
+            humanInteraction: true,
+            mode: 1,
+            isActive: true,
+            isDeleted: false,
+            currentProgress: ['trustee_kyc'],
+            identifierId: newTrusteeProfile.id
+          },
+          {transaction: tx}
+        );
+
+        await this.mediaService.updateMediaUsedStatus([body.panCardDocumentId], true);
+        const result = await this.rbacService.assignNewUserRole(newUserProfile.id, 'trustee');
+        if (!result.success || !result.data) {
+          if (process.env.NODE_ENV === 'dev') {
+            throw new HttpErrors.InternalServerError('Error while assigning role to user');
+          } else {
+            throw new HttpErrors.InternalServerError('Internal server error');
+          }
+        }
+        console.log('result', result.data);
+        await tx.commit();
+
+        return {
+          success: true,
+          message: 'Registration completed',
+          kycStatus: 0,
+        };
+      }
+
+      // ----------------------------
+      //  Auto verification (No Human Interaction)
+      // ----------------------------
+      if (
+        body.submittedPanDetails.submittedTrusteeName !== body.legalEntityName
+      ) {
+        throw new HttpErrors.BadRequest('PAN details do not match legal entity name');
+      }
+
+      // // Basic validation: Submitted PAN should match Extracted PAN
+      // if (
+      //   body.extractedPanDetails?.extractedPanNumber &&
+      //   body.extractedPanDetails.extractedPanNumber !==
+      //   body.submittedPanDetails.submittedPanNumber
+      // ) {
+      //   throw new HttpErrors.BadRequest('PAN number mismatch');
+      // }
+
+      // Auto approve PAN
+      trusteePanData.status = 1; // Verified
+      trusteePanData.isActive = true;
+
+      await this.trusteePanCardsRepository.create(trusteePanData, {
+        transaction: tx,
+      });
+
+      // ----------------------------
+      //  Create KYC (Auto Approved PAN)
+      // ----------------------------
+      await this.kycApplicationsRepository.create(
+        {
+          roleValue: registrationSession.roleValue,
+          usersId: newUserProfile.id,
+          status: 1,
+          humanInteraction: false,
+          mode: 0,
+          isActive: true,
+          isDeleted: false,
+          currentProgress: ['trustee_kyc', 'pan_verified'],
+        },
+        {transaction: tx}
+      );
+
+      await this.mediaService.updateMediaUsedStatus([body.panCardDocumentId], true);
+      const result = await this.rbacService.assignNewUserRole(newUserProfile.id, 'trustee');
+      if (!result.success || !result.data) {
+        if (process.env.NODE_ENV === 'dev') {
+          throw new HttpErrors.InternalServerError('Error while assigning role to user');
+        } else {
+          throw new HttpErrors.InternalServerError('Internal server error');
+        }
+      }
+      console.log('result', result.data);
+      await tx.commit();
+
+      return {
+        success: true,
+        message: 'Registration completed',
+        kycStatus: 1,
+      };
+
+    } catch (error) {
+      await tx.rollback();
+      console.log('error while registering new company :', error);
+      throw error;
+    }
+  }
+
+  // @post('/auth/company-login')
+  // async companyLogin(
+  //   @requestBody({
+  //     content: {
+  //       'application/json': {
+  //         schema: {
+  //           type: 'object',
+  //           required: ['email', 'password'],
+  //           properties: {
+  //             email: {type: 'string'},
+  //             password: {type: 'string'}
+  //           }
+  //         }
+  //       }
+  //     }
+  //   })
+  //   body: {email: string; password: string;}
+  // ): Promise<{success: boolean; message: string; accessToken: string; user: object}> {
+  //   const userData = await this.usersRepository.findOne({
+  //     where: {
+  //       and: [
+  //         {email: body.email},
+  //         {isDeleted: false}
+  //       ]
+  //     }
+  //   });
+
+  //   if (!userData) {
+  //     throw new HttpErrors.BadRequest('User not exist');
+  //   }
+
+  //   const company = await this.companyProfilesRepository.findOne({
+  //     where: {
+  //       and: [
+  //         {usersId: userData.id},
+  //         {isActive: true},
+  //         {isDeleted: false}
+  //       ]
+  //     }
+  //   });
+
+  //   if (!company) {
+  //     throw new HttpErrors.Unauthorized('Unauthorized access');
+  //   }
+
+  //   const user = await this.userService.verifyCredentials(body);
+
+  //   const {roles, permissions} = await this.rbacService.getUserRoleAndPermissionsByRole(user.id!, 'company');
+
+  //   if (!roles.includes('company')) {
+  //     throw new HttpErrors.Forbidden('Access denied. Only company users can login here.');
+  //   }
+
+  //   const userProfile: UserProfile & {
+  //     roles: string[];
+  //     permissions: string[];
+  //     phone: string;
+  //   } = {
+  //     [securityId]: user.id!,
+  //     id: user.id!,
+  //     email: user.email,
+  //     phone: user.phone,
+  //     roles,
+  //     permissions,
+  //   };
+
+  //   const token = await this.jwtService.generateToken(userProfile);
+  //   const profile = await this.rbacService.returnCompanyProfile(user.id, roles, permissions);
+  //   return {
+  //     success: true,
+  //     message: "Company login successful",
+  //     accessToken: token,
+  //     user: profile
+  //   };
+  // }
 
   // ------------------------------------------Approve KYC--------------------------------------------
   @authenticate('jwt')

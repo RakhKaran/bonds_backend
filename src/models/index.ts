@@ -20,3 +20,4 @@ export * from './document-placeholders.model';
 export * from './document-roles.model';
 export * from './trustee-profiles.model';
 export * from './trustee-pan-cards.model';
+export * from './trustee-entity-types.model';

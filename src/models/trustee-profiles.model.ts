@@ -3,6 +3,7 @@ import {TrusteePanCards} from './trustee-pan-cards.model';
 import {KycApplications} from './kyc-applications.model';
 import {Users} from './users.model';
 import {Media} from './media.model';
+import {TrusteeEntityTypes} from './trustee-entity-types.model';
 
 @model({
   settings: {
@@ -173,6 +174,8 @@ export class TrusteeProfiles extends Entity {
   @belongsTo(() => Media)
   trusteeLogoId: string;
 
+  @belongsTo(() => TrusteeEntityTypes)
+  trusteeEntityTypesId: string;
   constructor(data?: Partial<TrusteeProfiles>) {
     super(data);
   }
