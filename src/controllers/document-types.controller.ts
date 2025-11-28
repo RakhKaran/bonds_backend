@@ -4,8 +4,9 @@ import {
   CountSchema,
   Filter,
   FilterExcludingWhere,
+  IsolationLevel,
   repository,
-  Where,
+  Where
 } from '@loopback/repository';
 import {
   get,
@@ -81,23 +82,49 @@ export class DocumentTypesController {
       }>
     },
   ): Promise<DocumentTypes> {
-    const {roles, documentPlaceholders, ...documentData} = documentTypes;
-    const existingDocument = await this.documentTypesRepository.findOne({where: {value: documentData.value}});
-    if (existingDocument) {
-      throw new HttpErrors.BadRequest('Same document already exist');
-    }
-    const newDocumentType = await this.documentTypesRepository.create(documentData);
-    if (newDocumentType) {
-      for (const roleId of roles) {
-        await this.documentTypesRepository.roles(newDocumentType.id).link(roleId);
+    // start tx
+    const tx = await this.documentTypesRepository.dataSource.beginTransaction({
+      isolationLevel: IsolationLevel.READ_COMMITTED
+    });
+
+    try {
+      // extract nav props so they are not passed into repository.create()
+      const {roles = [], documentPlaceholders = [], ...documentData} = documentTypes;
+
+      // check duplicate within tx
+      const existingDocument = await this.documentTypesRepository.findOne(
+        {where: {value: documentData.value}},
+        {transaction: tx}
+      );
+      if (existingDocument) {
+        throw new HttpErrors.BadRequest('Same document already exist');
       }
 
-      for (const documentPlaceholderData of documentPlaceholders) {
-        await this.documentTypesRepository.documentPlaceholders(newDocumentType.id).create(documentPlaceholderData);
-      }
-    }
+      // create document type (within tx)
+      const newDocumentType = await this.documentTypesRepository.create(documentData, {transaction: tx});
 
-    return newDocumentType;
+      // link roles (use relation repository and pass transaction)
+      if (roles && roles.length) {
+        for (const roleId of roles) {
+          await this.documentTypesRepository.roles(newDocumentType.id).link(roleId, {transaction: tx});
+        }
+      }
+
+      // create placeholders using constrained relation repo (auto sets FK) and pass tx
+      if (documentPlaceholders && documentPlaceholders.length) {
+        for (const placeholder of documentPlaceholders) {
+          await this.documentTypesRepository
+            .documentPlaceholders(newDocumentType.id)
+            .create(placeholder, {transaction: tx});
+        }
+      }
+
+      await tx.commit();
+      return newDocumentType;
+    } catch (err) {
+      await tx.rollback();
+      throw err;
+    }
   }
 
   @get('/document-types/count')
@@ -246,18 +273,37 @@ export class DocumentTypesController {
       }>
     },
   ): Promise<void> {
-    const {roles, documentPlaceholders, ...documentTypesData} = documentTypes;
-    await this.documentTypesRepository.updateById(id, documentTypesData);
+    // start transaction
+    const tx = await this.documentTypesRepository.dataSource.beginTransaction({
+      isolationLevel: IsolationLevel.READ_COMMITTED,
+    });
 
-    await this.documentTypesRepository.roles(id).unlinkAll();
-    for (const roleId of roles) {
-      await this.documentTypesRepository.roles(id).link(roleId);
-    }
+    try {
+      const {roles = [], documentPlaceholders = [], ...documentTypesData} = documentTypes;
 
-    await this.documentTypesRepository.documentPlaceholders(id).delete();
+      // 1. Update main entity
+      await this.documentTypesRepository.updateById(id, documentTypesData, {transaction: tx});
 
-    for (const placeholder of documentPlaceholders) {
-      await this.documentTypesRepository.documentPlaceholders(id).create(placeholder);
+      // 2. Update roles → remove all then re-add
+      await this.documentTypesRepository.roles(id).unlinkAll({transaction: tx});
+      for (const roleId of roles) {
+        await this.documentTypesRepository.roles(id).link(roleId, {transaction: tx});
+      }
+
+      // 3. Replace existing placeholders safely
+      await this.documentTypesRepository.documentPlaceholders(id).delete(undefined, {transaction: tx});
+      for (const placeholder of documentPlaceholders) {
+        await this.documentTypesRepository
+          .documentPlaceholders(id)
+          .create(placeholder, {transaction: tx});
+      }
+
+      // all good → commit
+      await tx.commit();
+    } catch (error) {
+      // something failed → rollback everything
+      await tx.rollback();
+      throw error;
     }
   }
 

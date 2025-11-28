@@ -9,7 +9,7 @@ import {DocumentTypes} from './document-types.model';
     },
     indexes: {
       uniqueplaceholder: {
-        keys: {fieldValue: 1},
+        keys: {fieldValue: 1, documentTypesId: 1},
         options: {unique: true},
       },
     },
