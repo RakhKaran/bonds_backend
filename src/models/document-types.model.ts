@@ -1,53 +1,48 @@
 import {Entity, hasMany, model, property} from '@loopback/repository';
-import {Permissions} from './permissions.model';
-import {RolePermissions} from './role-permissions.model';
-import {UserRoles} from './user-roles.model';
-import {Users} from './users.model';
-import {DocumentTypes} from './document-types.model';
+import {DocumentPlaceholders} from './document-placeholders.model';
+import {Roles} from './roles.model';
 import {DocumentRoles} from './document-roles.model';
 
 @model({
   settings: {
     postgresql: {
-      table: 'roles',
+      table: 'document_types',
       schema: 'public',
     },
     indexes: {
-      uniqueValue: {
+      uniqueDocumentType: {
         keys: {value: 1},
         options: {unique: true},
       },
     },
   },
 })
-export class Roles extends Entity {
+export class DocumentTypes extends Entity {
   @property({
     type: 'string',
     id: true,
     generated: false,
-    postgresql: {
-      dataType: 'uuid',
-    },
+    postgresql: {dataType: 'uuid'},
   })
   id: string;
 
   @property({
     type: 'string',
-    required: true,
+    required: true
   })
-  label: string;
+  name: string;
 
   @property({
     type: 'string',
-    required: true,
+    required: true
   })
   value: string;
 
   @property({
     type: 'string',
-    postgresql: {dataType: 'text'},
+    required: true
   })
-  description?: string;
+  description: string;
 
   @property({
     type: 'boolean',
@@ -78,20 +73,19 @@ export class Roles extends Entity {
   })
   deletedAt?: Date;
 
-  @hasMany(() => Permissions, {through: {model: () => RolePermissions}})
-  permissions: Permissions[];
+  @hasMany(() => DocumentPlaceholders)
+  documentPlaceholders: DocumentPlaceholders[];
 
-  @hasMany(() => Users, {through: {model: () => UserRoles}})
-  users: Users[];
+  @hasMany(() => Roles, {through: {model: () => DocumentRoles}})
+  roles: Roles[];
 
-  @hasMany(() => DocumentTypes, {through: {model: () => DocumentRoles}})
-  documentTypes: DocumentTypes[];
-
-  constructor(data?: Partial<Roles>) {
+  constructor(data?: Partial<DocumentTypes>) {
     super(data);
   }
 }
 
-export interface RolesRelations { }
+export interface DocumentTypesRelations {
+  // describe navigational properties here
+}
 
-export type RolesWithRelations = Roles & RolesRelations;
+export type DocumentTypesWithRelations = DocumentTypes & DocumentTypesRelations;

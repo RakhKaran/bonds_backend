@@ -15,3 +15,6 @@ export * from './bond-estimations.repository';
 export * from './estimation-credit-ratings.repository';
 export * from './credit-ratings.repository';
 export * from './credit-rating-agencies.repository';
+export * from './document-types.repository';
+export * from './document-placeholders.repository';
+export * from './document-roles.repository';

@@ -15,3 +15,6 @@ export * from './bond-estimations.model';
 export * from './estimation-credit-ratings.model';
 export * from './credit-ratings.model';
 export * from './credit-rating-agencies.model';
+export * from './document-types.model';
+export * from './document-placeholders.model';
+export * from './document-roles.model';

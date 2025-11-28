@@ -25,7 +25,10 @@ export async function migrate(args: string[]) {
       'CreditRatings',
       'CreditRatingAgencies',
       'BondEstimations',
-      'EstimationCreditRatings'
+      'EstimationCreditRatings',
+      'DocumentTypes',
+      'DocumentPlaceholders',
+      'DocumentRoles'
     ]
   });
 
