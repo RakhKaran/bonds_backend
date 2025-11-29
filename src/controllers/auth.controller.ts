@@ -290,7 +290,11 @@ export class AuthController {
         where: {usersId: user.id, rolesId: role.id}
       });
 
-      if (isUserRole) {
+      const kycApplication = await this.kycApplicationsRepository.findOne({
+        where: {usersId: user.id, roleValue: role.value, isActive: true, isDeleted: false, status: 0}
+      });
+
+      if (isUserRole && !kycApplication) {
         throw new HttpErrors.BadRequest(
           `Phone number is already registered as ${role.label}`
         );
@@ -317,6 +321,31 @@ export class AuthController {
           ? "Failed to create otp"
           : "Something went wrong"
       );
+    }
+
+    const existingSession = await this.registrationSessionsRepository.findOne({
+      where: {
+        and: [
+          {phoneNumber: body.phone},
+          {roleValue: body.role},
+          {isActive: true},
+          {isDeleted: false}
+        ]
+      }
+    });
+
+    if (existingSession) {
+      await this.registrationSessionsRepository.updateById(existingSession.id, {
+        phoneVerified: false,
+        emailVerified: false,
+        expiresAt: new Date(Date.now() + 30 * 60 * 1000), // 30 min expiry
+      });
+
+      return {
+        success: true,
+        message: "OTP sent successfully",
+        sessionId: existingSession.id,
+      };
     }
 
     const session = await this.registrationSessionsRepository.create({
@@ -491,11 +520,15 @@ export class AuthController {
         );
       }
 
+      const kycApplication = await this.kycApplicationsRepository.findOne({
+        where: {usersId: user.id, roleValue: role.value, isActive: true, isDeleted: false, status: 0}
+      });
+
       const isUserRole = await this.userRolesRepository.findOne({
         where: {usersId: user.id, rolesId: role.id}
       });
 
-      if (isUserRole) {
+      if (isUserRole && !kycApplication) {
         throw new HttpErrors.BadRequest(
           `Email is already registered as ${role.label}`
         );
@@ -551,7 +584,7 @@ export class AuthController {
         },
       },
     })
-    body: {sessionId: string; otp: string},
+    body: {sessionId: string; otp: string; isAlreadyRegistered: boolean; kycStatus: number | null},
   ): Promise<{success: boolean; message: string}> {
     const {sessionId, otp} = body;
 
@@ -632,7 +665,7 @@ export class AuthController {
             type: 'object',
             required: [
               'sessionId',
-              'password',
+              // 'password',
               'companyName',
               'CIN',
               'GSTIN',
@@ -720,7 +753,7 @@ export class AuthController {
     })
     body: {
       sessionId: string;
-      password: string;
+      // password: string;
       companyName: string;
       CIN: string;
       GSTIN: string;
@@ -788,13 +821,13 @@ export class AuthController {
       // ----------------------------
       //  Create User
       // ----------------------------
-      const hashedPassword = await this.hasher.hashPassword(body.password);
+      // const hashedPassword = await this.hasher.hashPassword(body.password);
 
       const newUserProfile = await this.usersRepository.create(
         {
           phone: registrationSession.phoneNumber,
           email: registrationSession.email,
-          password: hashedPassword,
+          // password: hashedPassword,
           isActive: false,
           isDeleted: false,
         },
@@ -871,7 +904,7 @@ export class AuthController {
           {
             roleValue: registrationSession.roleValue,
             usersId: newUserProfile.id,
-            status: 0,
+            status: 3,
             humanInteraction: true,
             mode: 1,
             isActive: true,
@@ -1055,7 +1088,7 @@ export class AuthController {
             type: 'object',
             required: [
               'sessionId',
-              'password',
+              // 'password',
               'legalEntityName',
               'CIN',
               // 'GSTIN',
@@ -1074,7 +1107,7 @@ export class AuthController {
                 type: 'string',
                 description: 'Registration session id'
               },
-              password: {type: 'string'},
+              // password: {type: 'string'},
               legalEntityName: {type: 'string'},
               CIN: {
                 type: 'string',
@@ -1143,7 +1176,7 @@ export class AuthController {
     })
     body: {
       sessionId: string;
-      password: string;
+      // password: string;
       legalEntityName: string;
       CIN: string;
       GSTIN?: string;
@@ -1167,7 +1200,7 @@ export class AuthController {
       trusteeEntityTypesId: string;
       // companyEntityTypeId: string;
     }
-  ): Promise<{success: boolean; message: string; kycStatus: number}> {
+  ): Promise<{success: boolean; message: string; kycStatus: number; usersId: string; currentProgress: string[]}> {
     const tx = await this.trusteeProfilesRepository.dataSource.beginTransaction({
       isolationLevel: 'READ COMMITTED',
     });
@@ -1213,13 +1246,13 @@ export class AuthController {
       // ----------------------------
       //  Create User
       // ----------------------------
-      const hashedPassword = await this.hasher.hashPassword(body.password);
+      // const hashedPassword = await this.hasher.hashPassword(body.password);
 
       const newUserProfile = await this.usersRepository.create(
         {
           phone: registrationSession.phoneNumber,
           email: registrationSession.email,
-          password: hashedPassword,
+          // password: hashedPassword,
           isActive: false,
           isDeleted: false,
         },
@@ -1293,7 +1326,7 @@ export class AuthController {
           transaction: tx,
         });
 
-        await this.kycApplicationsRepository.create(
+        const newKycApplication = await this.kycApplicationsRepository.create(
           {
             roleValue: registrationSession.roleValue,
             usersId: newUserProfile.id,
@@ -1324,6 +1357,8 @@ export class AuthController {
           success: true,
           message: 'Registration completed',
           kycStatus: 0,
+          usersId: newUserProfile.id,
+          currentProgress: newKycApplication.currentProgress ?? ['trustee_kyc']
         };
       }
 
@@ -1356,11 +1391,11 @@ export class AuthController {
       // ----------------------------
       //  Create KYC (Auto Approved PAN)
       // ----------------------------
-      await this.kycApplicationsRepository.create(
+      const newKycApplication = await this.kycApplicationsRepository.create(
         {
           roleValue: registrationSession.roleValue,
           usersId: newUserProfile.id,
-          status: 1,
+          status: 0,
           humanInteraction: false,
           mode: 0,
           isActive: true,
@@ -1385,7 +1420,9 @@ export class AuthController {
       return {
         success: true,
         message: 'Registration completed',
-        kycStatus: 1,
+        kycStatus: 0,
+        currentProgress: newKycApplication.currentProgress ?? ['trustee_kyc', 'pan_verified'],
+        usersId: newUserProfile.id
       };
 
     } catch (error) {
