@@ -213,43 +213,52 @@ export class FileUploadController {
 
   @get('/files/file/{path}/{fileName}')
   @oas.response.file()
-  downloadFile(
+  async downloadFile(
     @param.path.string('path') folderPath: string,
     @param.path.string('fileName') fileName: string,
     @inject(RestBindings.Http.RESPONSE) response: Response,
   ) {
     const file = this.validateFileName(`${folderPath}/${fileName}`);
-    fs.readFile(file, function (err, data) {
-      if (err) {
-        response.writeHead(404);
-        response.end('Something Went Wrong');
-      } else {
-        response.writeHead(200);
-        response.end(data);
-      }
+
+    return new Promise<void>((resolve) => {
+      fs.readFile(file, (err, data) => {
+        if (err) {
+          response.status(404).send('Something Went Wrong');
+          return resolve();
+        }
+
+        response.setHeader('Content-Type', 'application/octet-stream');
+        response.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+        response.status(200).end(data);
+
+        resolve();
+      });
     });
-    return response;
   }
 
   @get('/files/file/{fileName}')
   @oas.response.file()
-  downloadFileOutsideFolder(
+  async downloadFileOutsideFolder(
     @param.path.string('fileName') fileName: string,
     @inject(RestBindings.Http.RESPONSE) response: Response,
   ) {
     const file = this.validateFileName(fileName);
-    fs.readFile(file, function (err, data) {
-      if (err) {
-        response.writeHead(404);
-        response.end('Something Went Wrong');
-      } else {
-        response.writeHead(200);
-        response.end(data);
-      }
-    });
-    return response;
-  }
 
+    return new Promise<void>((resolve) => {
+      fs.readFile(file, (err, data) => {
+        if (err) {
+          response.status(404).send('Something Went Wrong');
+          return resolve();
+        }
+
+        response.setHeader('Content-Type', 'application/octet-stream');
+        response.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+        response.status(200).end(data);
+
+        resolve();
+      });
+    });
+  }
 
   /**
    * Validate file names to prevent them goes beyond the designated directory
