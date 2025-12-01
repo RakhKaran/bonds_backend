@@ -69,7 +69,7 @@ export class CompaniesController {
       include: [
         {relation: 'users', scope: {fields: {id: true, phone: true, email: true}}},
         {relation: 'kycApplications'},
-        {relation: 'companyPanCards'},
+        {relation: 'companyPanCards', scope: {include: [{relation: 'panCardDocument'}]}},
         {relation: 'companyEntityType'},
         {relation: 'companySectorType'},
         {relation: 'companyLogoData', scope: {fields: {id: true, fileOriginalName: true, fileUrl: true}}},
