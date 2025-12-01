@@ -900,7 +900,7 @@ export class AuthController {
           transaction: tx,
         });
 
-        await this.kycApplicationsRepository.create(
+        const newApplication = await this.kycApplicationsRepository.create(
           {
             roleValue: registrationSession.roleValue,
             usersId: newUserProfile.id,
@@ -924,6 +924,8 @@ export class AuthController {
             throw new HttpErrors.InternalServerError('Internal server error');
           }
         }
+
+        await this.companyProfilesRepository.updateById(newCompanyProfile.id, {kycApplicationsId: newApplication.id}, {transaction: tx})
         console.log('result', result.data);
         await tx.commit();
 
@@ -963,7 +965,7 @@ export class AuthController {
       // ----------------------------
       //  Create KYC (Auto Approved PAN)
       // ----------------------------
-      await this.kycApplicationsRepository.create(
+      const newApplication = await this.kycApplicationsRepository.create(
         {
           roleValue: registrationSession.roleValue,
           usersId: newUserProfile.id,
@@ -977,6 +979,7 @@ export class AuthController {
         {transaction: tx}
       );
 
+      await this.companyProfilesRepository.updateById(newCompanyProfile.id, {kycApplicationsId: newApplication.id}, {transaction: tx})
       await this.mediaService.updateMediaUsedStatus([body.panCardDocumentId], true);
       const result = await this.rbacService.assignNewUserRole(newUserProfile.id, 'company');
       if (!result.success || !result.data) {
@@ -1364,6 +1367,8 @@ export class AuthController {
             throw new HttpErrors.InternalServerError('Internal server error');
           }
         }
+
+        await this.trusteeProfilesRepository.updateById(newTrusteeProfile.id, {kycApplicationsId: newKycApplication.id}, {transaction: tx});
         console.log('result', result.data);
         await tx.commit();
 
@@ -1428,6 +1433,8 @@ export class AuthController {
           throw new HttpErrors.InternalServerError('Internal server error');
         }
       }
+
+      await this.trusteeProfilesRepository.updateById(newTrusteeProfile.id, {kycApplicationsId: newKycApplication.id}, {transaction: tx});
       console.log('result', result.data);
       await tx.commit();
 
