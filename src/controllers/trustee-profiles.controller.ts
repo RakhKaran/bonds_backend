@@ -1,5 +1,5 @@
 import {inject} from '@loopback/core';
-import {repository} from '@loopback/repository';
+import {IsolationLevel, repository} from '@loopback/repository';
 import {getModelSchemaRef, HttpErrors, post, requestBody} from '@loopback/rest';
 import {AuthorizeSignatories, BankDetails, UserUploadedDocuments} from '../models';
 import {KycApplicationsRepository, TrusteeProfilesRepository} from '../repositories';
@@ -78,7 +78,7 @@ export class TrusteeProfilesController {
       documents: {documentsId: string; documentsFileId: string;}[];
     }
   ): Promise<{success: boolean; message: string; uploadedDocuments: UserUploadedDocuments[]; currentProgress: string[]}> {
-    const tx = await this.trusteeProfilesRepository.dataSource.beginTransaction();
+    const tx = await this.trusteeProfilesRepository.dataSource.beginTransaction({IsolationLevel: IsolationLevel.READ_COMMITTED});
 
     try {
       const trustee = await this.trusteeProfilesRepository.findOne(
@@ -220,7 +220,7 @@ export class TrusteeProfilesController {
     }>;
     currentProgress: string[];
   }> {
-    const tx = await this.trusteeProfilesRepository.dataSource.beginTransaction();
+    const tx = await this.trusteeProfilesRepository.dataSource.beginTransaction({IsolationLevel: IsolationLevel.READ_COMMITTED});
 
     try {
       const trustee = await this.trusteeProfilesRepository.findOne(
