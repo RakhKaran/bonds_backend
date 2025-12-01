@@ -684,7 +684,7 @@ export class AuthController {
                 type: 'string',
                 description: 'Registration session id'
               },
-              password: {type: 'string'},
+              // password: {type: 'string'},
               companyName: {type: 'string'},
               CIN: {
                 type: 'string',
@@ -823,17 +823,29 @@ export class AuthController {
       // ----------------------------
       // const hashedPassword = await this.hasher.hashPassword(body.password);
 
-      const newUserProfile = await this.usersRepository.create(
-        {
-          phone: registrationSession.phoneNumber,
-          email: registrationSession.email,
-          // password: hashedPassword,
-          isActive: false,
-          isDeleted: false,
-        },
-        {transaction: tx}
-      );
+      let newUserProfile = await this.usersRepository.findOne({
+        where: {
+          and: [
+            {email: registrationSession.email},
+            {phone: registrationSession.phoneNumber},
+            {isActive: true},
+            {isDeleted: false}
+          ]
+        }
+      });
 
+      if (!newUserProfile) {
+        newUserProfile = await this.usersRepository.create(
+          {
+            phone: registrationSession.phoneNumber,
+            email: registrationSession.email,
+            // password: hashedPassword,
+            isActive: false,
+            isDeleted: false,
+          },
+          {transaction: tx}
+        );
+      }
       // ----------------------------
       //  Create Company Profile
       // ----------------------------

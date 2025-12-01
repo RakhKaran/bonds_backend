@@ -60,8 +60,6 @@ export class TrusteeEntityTypesController {
     return this.trusteeEntityTypesRepository.count(where);
   }
 
-  @authenticate('jwt')
-  @authorize({roles: ['super_admin']})
   @get('/trustee-entity-types')
   @response(200, {
     description: 'Array of TrusteeEntityTypes model instances',
