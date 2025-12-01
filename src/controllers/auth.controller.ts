@@ -1619,19 +1619,19 @@ export class AuthController {
       // update kyc application
       await this.kycApplicationsRepository.updateById(
         applicationId,
-        {status},
+        {status, verifiedAt: new Date()},
         {transaction: tx}
       );
 
       // APPROVED
-      if (status === 1) {
+      if (status === 2) {
         await this.companyProfilesRepository.updateById(
           companyId,
           {isActive: true},
           {transaction: tx}
         );
 
-        await this.companyPanCardsRepository.updateById(companyPanCard?.id, {status: 1})
+        await this.companyPanCardsRepository.updateById(companyPanCard?.id, {status: 1, verifiedAt: new Date()})
 
         return {
           success: true,
@@ -1641,7 +1641,7 @@ export class AuthController {
       }
 
       // REJECTED
-      if (status === 2) {
+      if (status === 3) {
         await this.companyProfilesRepository.updateById(
           companyId,
           {isActive: false},
