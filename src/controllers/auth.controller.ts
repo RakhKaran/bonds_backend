@@ -821,7 +821,7 @@ export class AuthController {
       // ----------------------------
       //  Create User
       // ----------------------------
-      // const hashedPassword = await this.hasher.hashPassword(body.password);
+      const hashedPassword = await this.hasher.hashPassword("Company@123");
 
       let newUserProfile = await this.usersRepository.findOne({
         where: {
@@ -839,7 +839,7 @@ export class AuthController {
           {
             phone: registrationSession.phoneNumber,
             email: registrationSession.email,
-            // password: hashedPassword,
+            password: hashedPassword,
             isActive: false,
             isDeleted: false,
           },
@@ -1273,13 +1273,13 @@ export class AuthController {
       // ----------------------------
       //  Create User
       // ----------------------------
-      // const hashedPassword = await this.hasher.hashPassword(body.password);
+      const hashedPassword = await this.hasher.hashPassword("Trustee@123");
 
       const newUserProfile = await this.usersRepository.create(
         {
           phone: registrationSession.phoneNumber,
           email: registrationSession.email,
-          // password: hashedPassword,
+          password: hashedPassword,
           isActive: false,
           isDeleted: false,
         },
