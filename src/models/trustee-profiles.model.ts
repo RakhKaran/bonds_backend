@@ -1,9 +1,9 @@
-import {Entity, model, property, hasOne, belongsTo} from '@loopback/repository';
-import {TrusteePanCards} from './trustee-pan-cards.model';
+import {belongsTo, Entity, hasOne, model, property} from '@loopback/repository';
 import {KycApplications} from './kyc-applications.model';
-import {Users} from './users.model';
 import {Media} from './media.model';
 import {TrusteeEntityTypes} from './trustee-entity-types.model';
+import {TrusteePanCards} from './trustee-pan-cards.model';
+import {Users} from './users.model';
 
 @model({
   settings: {
@@ -123,6 +123,26 @@ export class TrusteeProfiles extends Entity {
     },
   })
   udyamRegistrationNumber?: string;
+
+  @property({
+    type: 'string',
+    required: true,
+    jsonSchema: {
+      pattern: '^IND\\d{9}$',
+      errorMessage: 'Invalid SEBI Registration Number. Must be like IND000000501',
+    },
+  })
+  sebiRegistrationNumber: string;
+
+  @property({
+    type: 'string',
+    required: true,
+    jsonSchema: {
+      pattern: '^\\d{4}-\\d{2}-\\d{2}$',
+      errorMessage: 'must be YYYY-MM-DD',
+    },
+  })
+  sebiValidityDate: string;
 
   @property({
     type: 'string',

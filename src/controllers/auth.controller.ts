@@ -904,7 +904,7 @@ export class AuthController {
           {
             roleValue: registrationSession.roleValue,
             usersId: newUserProfile.id,
-            status: 3,
+            status: 1,
             humanInteraction: true,
             mode: 1,
             isActive: true,
@@ -967,7 +967,7 @@ export class AuthController {
         {
           roleValue: registrationSession.roleValue,
           usersId: newUserProfile.id,
-          status: 1,
+          status: 2,
           humanInteraction: false,
           mode: 0,
           isActive: true,
@@ -1093,6 +1093,8 @@ export class AuthController {
               'CIN',
               // 'GSTIN',
               // 'udyamRegistrationNumber',
+              'sebiRegistrationNumber',
+              'sebiValidityDate',
               'dateOfIncorporation',
               'cityOfIncorporation',
               'stateOfIncorporation',
@@ -1120,6 +1122,14 @@ export class AuthController {
               },
               udyamRegistrationNumber: {
                 type: 'string'
+              },
+              sebiRegistrationNumber: {
+                type: 'string',
+                pattern: '^IND\\d{9}$'
+              },
+              sebiValidityDate: {
+                type: 'string',
+                pattern: '^\\d{4}-\\d{2}-\\d{2}$'
               },
               dateOfIncorporation: {
                 type: 'string',
@@ -1181,6 +1191,8 @@ export class AuthController {
       CIN: string;
       GSTIN?: string;
       udyamRegistrationNumber?: string;
+      sebiRegistrationNumber: string;
+      sebiValidityDate: string;
       dateOfIncorporation: string; // yyyy-mm-dd
       cityOfIncorporation: string;
       stateOfIncorporation: string;
@@ -1268,11 +1280,13 @@ export class AuthController {
           legalEntityName: body.legalEntityName,
           CIN: body.CIN,
           ...(body.GSTIN && {GSTIN: body.GSTIN}),
+          sebiRegistrationNumber: body.sebiRegistrationNumber,
+          sebiValidityDate: body.sebiValidityDate,
           dateOfIncorporation: body.dateOfIncorporation,
           cityOfIncorporation: body.cityOfIncorporation,
           stateOfIncorporation: body.stateOfIncorporation,
           countryOfIncorporation: body.countryOfIncorporation,
-          ...(body.udyamRegistrationNumber && {GSTIN: body.udyamRegistrationNumber}),
+          ...(body.udyamRegistrationNumber && {udyamRegistrationNumber: body.udyamRegistrationNumber}),
           trusteeEntityTypesId: body.trusteeEntityTypesId,
           isActive: false,
           isDeleted: false,

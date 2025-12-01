@@ -1,22 +1,38 @@
 import {belongsTo, Entity, model, property} from '@loopback/repository';
+import {Documents} from './documents.model';
+import {Media} from './media.model';
 import {Users} from './users.model';
 
 @model({
   settings: {
     postgresql: {
-      table: 'kyc_applications',
+      table: 'user_uploaded_documents',
       schema: 'public',
+    },
+    indexes: {
+      uniqueUserDocument: {
+        keys: {usersId: 1, documentsId: 1, roleValue: 1, identifierId: 1},
+        options: {unique: true}
+      }
     },
   },
 })
-export class KycApplications extends Entity {
+export class UserUploadedDocuments extends Entity {
   @property({
     type: 'string',
     id: true,
     generated: false,
-    postgresql: {dataType: 'uuid'},
+    postgresql: {
+      dataType: 'uuid',
+    },
   })
   id: string;
+
+  @belongsTo(() => Users)
+  usersId: string;
+
+  @belongsTo(() => Documents)
+  documentsId: string;
 
   @property({
     type: 'string',
@@ -25,10 +41,11 @@ export class KycApplications extends Entity {
   roleValue: string;
 
   @property({
-    type: 'boolean',
-    default: false,
+    type: 'string',
+    required: true,
+    postgresql: {dataType: 'uuid'},
   })
-  humanInteraction?: boolean;
+  identifierId: string;
 
   @property({
     type: 'number',
@@ -43,10 +60,10 @@ export class KycApplications extends Entity {
     type: 'number',
     required: true,
     jsonSchema: {
-      enum: [0, 1, 2, 3],  // 0 => pending, 1 => under review 2 => approved, 3 => rejected,
+      enum: [0, 1, 2, 3],  // 0 => under review, 1 => approved 2 => rejected,
     },
   })
-  status: number;   // 0 => pending, 1 => under review 2 => approved, 3 => rejected,
+  status: number;   // 0 => under review, 1 => approved 2 => rejected,
 
   @property({
     type: 'string',
@@ -57,21 +74,6 @@ export class KycApplications extends Entity {
     type: 'date',
   })
   verifiedAt?: Date;
-
-  @property({
-    type: 'array',
-    itemType: 'string',
-  })
-  currentProgress?: string[];   // ['pan_uploaded', 'aadhaar_verified']   // some kyc forms has stepper at frontend so i should return prev done steps.
-
-  @property({
-    type: 'string',
-    required: true
-  })
-  identifierId: string; // based on roleValue we will search in resp. model.
-
-  @belongsTo(() => Users)
-  usersId: string;
 
   @property({
     type: 'boolean',
@@ -101,13 +103,17 @@ export class KycApplications extends Entity {
     type: 'date',
   })
   deletedAt?: Date;
-  constructor(data?: Partial<KycApplications>) {
+
+  @belongsTo(() => Media)
+  documentsFileId: string;
+
+  constructor(data?: Partial<UserUploadedDocuments>) {
     super(data);
   }
 }
 
-export interface KycApplicationsRelations {
+export interface UserUploadedDocumentsRelations {
   // describe navigational properties here
 }
 
-export type KycApplicationsWithRelations = KycApplications & KycApplicationsRelations;
+export type UserUploadedDocumentsWithRelations = UserUploadedDocuments & UserUploadedDocumentsRelations;

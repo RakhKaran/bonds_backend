@@ -106,6 +106,16 @@ export class CompanyPanCards extends Entity {
   })
   mode: number;
 
+  @property({
+    type: 'string',
+  })
+  reason?: string; // if rejection is there
+
+  @property({
+    type: 'date',
+  })
+  verifiedAt?: Date;
+
   @belongsTo(() => CompanyProfiles)
   companyProfilesId: string;
 

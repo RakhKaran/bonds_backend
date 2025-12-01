@@ -13,13 +13,16 @@ import path from 'path';
 import {JWTStrategy} from './authentication-strategy/jwt-strategy';
 import {EmailManagerBindings, FILE_UPLOAD_SERVICE, STORAGE_DIRECTORY} from './keys';
 import {MySequence} from './sequence';
+import {DocumentExtractionService} from './services/document-extraction.service';
 import {EmailService} from './services/email.service';
 import {BcryptHasher} from './services/hash.password.bcrypt';
 import {JWTService} from './services/jwt-service';
-import {RbacService} from './services/rbac.service';
-import {MyUserService} from './services/user-service';
-import {DocumentExtractionService} from './services/document-extraction.service';
 import {MediaService} from './services/media.service';
+import {RbacService} from './services/rbac.service';
+import {UserUploadedDocumentsService} from './services/user-documents.service';
+import {MyUserService} from './services/user-service';
+import {BankDetailsService} from './services/bank-details.service';
+import {AuthorizeSignatoriesService} from './services/signatories.service';
 
 export {ApplicationConfig};
 
@@ -67,6 +70,9 @@ export class BondsBackendApplication extends BootMixin(
     this.bind('service.user.service').toClass(MyUserService);
     this.bind('service.documentExtraction.service').toClass(DocumentExtractionService);
     this.bind('service.media.service').toClass(MediaService);
+    this.bind('service.userUploadedDocuments.service').toClass(UserUploadedDocumentsService);
+    this.bind('service.bankDetails.service').toClass(BankDetailsService);
+    this.bind('services.AuthorizeSignatoriesService.service').toClass(AuthorizeSignatoriesService);
     this.bind(EmailManagerBindings.SEND_MAIL).toClass(EmailService);
   }
 

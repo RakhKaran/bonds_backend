@@ -1,25 +1,22 @@
 import {Entity, model, property, belongsTo} from '@loopback/repository';
+import {Users} from './users.model';
 import {Media} from './media.model';
-import {TrusteeProfiles} from './trustee-profiles.model';
 
 @model({
   settings: {
     postgresql: {
-      table: 'trustee_pan_cards',
+      table: 'bank_details',
       schema: 'public',
     },
     indexes: {
-      uniqueTrusteeSubmittedPan: {
-        keys: {submittedPanNumber: 1},
+      uniqueBankDetails: {
+        keys: {usersId: 1, accountNumber: 1, roleValue: 1},
         options: {unique: true},
-      },
-      trusteePanStatusIndex: {
-        keys: {submittedPanNumber: 1, status: 1},
       },
     },
   },
 })
-export class TrusteePanCards extends Entity {
+export class BankDetails extends Entity {
   @property({
     type: 'string',
     id: true,
@@ -28,74 +25,85 @@ export class TrusteePanCards extends Entity {
   })
   id: string;
 
+  @property({
+    type: 'string',
+    required: true
+  })
+  bankName: string;
 
   @property({
     type: 'string',
-    jsonSchema: {
-      pattern: '^[A-Z]{5}[0-9]{4}[A-Z]{1}$', // PAN format
-    },
+    required: true
   })
-  extractedPanNumber?: string;
+  bankShortCode: string;
 
   @property({
     type: 'string',
-    jsonSchema: {
-      minLength: 3,
-      maxLength: 200,
-    },
+    required: true
   })
-  extractedTrusteeName?: string;
+  ifscCode: string;
 
   @property({
     type: 'string',
-    jsonSchema: {
-      pattern: '^\\d{4}-\\d{2}-\\d{2}$', // YYYY-MM-DD
-    },
+    required: true
   })
-  extractedDateOfBirth?: string;
+  branchName: string;
 
   @property({
-    type: 'string',
-    required: true,
-    jsonSchema: {
-      pattern: '^[A-Z]{5}[0-9]{4}[A-Z]{1}$',
-      errorMessage: {
-        pattern: 'Invalid PAN format (ABCDE1234F)',
-      },
-    },
+    type: 'string'
   })
-  submittedPanNumber: string;
-
-  @property({
-    type: 'string',
-    required: true,
-    jsonSchema: {
-      minLength: 3,
-      maxLength: 200,
-    },
-  })
-  submittedTrusteeName: string;
-
-  @property({
-    type: 'string',
-    required: true,
-    jsonSchema: {
-      pattern: '^\\d{4}-\\d{2}-\\d{2}$',
-      errorMessage: {
-        pattern: 'DOB must be in YYYY-MM-DD format',
-      },
-    },
-  })
-  submittedDateOfBirth: string;
+  bankAddress?: string;
 
   @property({
     type: 'number',
     required: true,
     jsonSchema: {
-      enum: [0, 1, 2], // 0=pending, 1=approved, 2=rejected
+      enum: [0, 1], // 0 = current, 1 = saving
     },
   })
-  status: number;
+  accountType: number; //  0 => current 1 => saving
+
+  @property({
+    type: 'string',
+    required: true
+  })
+  accountHolderName: string;
+
+  @property({
+    type: 'string',
+    required: true
+  })
+  accountNumber: string;
+
+  @property({
+    type: 'number',
+    required: true,
+    jsonSchema: {
+      enum: [0, 1, 2], // 0=passbook, 1=cheque, 2=statement
+    },
+  })
+  bankAccountProof: number; // 0 => passbook 1 => cancelled cheque 2 => statement
+
+  @belongsTo(() => Media)
+  bankAccountProofId: string;
+
+  @belongsTo(() => Users)
+  usersId: string;
+
+  @property({
+    type: 'string',
+    required: true
+  })
+  roleValue: string;
+
+  @property({
+    type: 'number',
+    required: true,
+    jsonSchema: {
+      enum: [0, 1, 2], // 0 => under review 1 => approved 2 => rejected
+    },
+  })
+  status: number; // 0 => under review 1 => approved 2 => rejected
 
   @property({
     type: 'number',
@@ -104,7 +112,7 @@ export class TrusteePanCards extends Entity {
       enum: [0, 1], // 0=auto OCR, 1=manual team verification
     },
   })
-  mode: number;
+  mode: number; // 0 => auto 1 => human
 
   @property({
     type: 'string',
@@ -115,6 +123,11 @@ export class TrusteePanCards extends Entity {
     type: 'date',
   })
   verifiedAt?: Date;
+
+  @property({
+    type: 'boolean',
+  })
+  isPrimary?: boolean;
 
   @property({
     type: 'boolean',
@@ -144,20 +157,13 @@ export class TrusteePanCards extends Entity {
     type: 'date',
   })
   deletedAt?: Date;
-
-  @belongsTo(() => Media)
-  panCardDocumentId: string;
-
-  @belongsTo(() => TrusteeProfiles)
-  trusteeProfilesId: string;
-
-  constructor(data?: Partial<TrusteePanCards>) {
+  constructor(data?: Partial<BankDetails>) {
     super(data);
   }
 }
 
-export interface TrusteePanCardsRelations {
+export interface BankDetailsRelations {
   // describe navigational properties here
 }
 
-export type TrusteePanCardsWithRelations = TrusteePanCards & TrusteePanCardsRelations;
+export type BankDetailsWithRelations = BankDetails & BankDetailsRelations;

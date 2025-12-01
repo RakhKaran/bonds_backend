@@ -2,6 +2,8 @@ import {Entity, model, property, hasMany} from '@loopback/repository';
 import {Roles} from './roles.model';
 import {UserRoles} from './user-roles.model';
 import {KycApplications} from './kyc-applications.model';
+import {BankDetails} from './bank-details.model';
+import {AuthorizeSignatories} from './authorize-signatories.model';
 
 @model({
   settings: {
@@ -89,6 +91,13 @@ export class Users extends Entity {
 
   @hasMany(() => KycApplications)
   kycApplications: KycApplications[];
+
+  @hasMany(() => BankDetails)
+  bankDetails: BankDetails[];
+
+  @hasMany(() => AuthorizeSignatories)
+  authorizeSignatories: AuthorizeSignatories[];
+
   constructor(data?: Partial<Users>) {
     super(data);
   }

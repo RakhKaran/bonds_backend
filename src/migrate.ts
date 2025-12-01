@@ -31,7 +31,13 @@ export async function migrate(args: string[]) {
       'DocumentRoles',
       'TrusteeProfiles',
       'TrusteeEntityTypes',
-      'TrusteePanCards'
+      'TrusteePanCards',
+      'Documents',
+      'Screens',
+      'DocumentScreens',
+      'UserUploadedDocuments',
+      'BankDetails',
+      'AuthorizeSignatories',
     ]
   });
 

@@ -1,0 +1,74 @@
+import {repository} from '@loopback/repository';
+import {HttpErrors} from '@loopback/rest';
+import axios from 'axios';
+import {BankDetails} from '../models';
+import {BankDetailsRepository} from '../repositories';
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+export class BankDetailsService {
+  constructor(
+    @repository(BankDetailsRepository)
+    public bankDetailsRepository: BankDetailsRepository,
+  ) { }
+
+  // extract-bank-info from ifsc code
+  async extractBankInfo(ifscCode: string) {
+    try {
+      const response = await axios.get(
+        `https://ifsc.razorpay.com/${ifscCode.trim().toUpperCase()}`
+      );
+
+      const data: any = response.data;
+
+      return {
+        bankName: data.BANK,
+        branchName: data.BRANCH,
+        bankShortCode: data.BANKCODE,
+        ifscCode: data.IFSC,
+        bankAddress: data.ADDRESS,
+        state: data.STATE,
+        district: data.DISTRICT,
+        city: data.CENTRE,
+      };
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        throw new HttpErrors.NotFound('Invalid IFSC code');
+      }
+      console.error('Error while extracting bank info:', error);
+      throw new Error('Failed to fetch bank details');
+    }
+  }
+
+  // create new bank account...
+  async createNewBankAccount(bankDetails: Omit<BankDetails, 'id'>): Promise<{
+    success: boolean;
+    message: string;
+    account: BankDetails;
+  }> {
+    try {
+      const checkForExistingAccount = await this.bankDetailsRepository.find({
+        where: {
+          and: [
+            {usersId: bankDetails.usersId},
+            {roleValue: bankDetails.roleValue}
+          ]
+        }
+      });
+
+      if (!checkForExistingAccount || checkForExistingAccount.length === 0) {
+        bankDetails.isPrimary = true;
+      }
+
+      const newAccount = await this.bankDetailsRepository.create(bankDetails);
+
+      return {
+        success: true,
+        message: 'New Account Created',
+        account: newAccount
+      }
+    } catch (error) {
+      console.log('Error while creating new bank account :', error);
+      throw error;
+    }
+  }
+}

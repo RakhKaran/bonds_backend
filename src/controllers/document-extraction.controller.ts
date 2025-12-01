@@ -12,7 +12,7 @@ import {DocumentExtractionService} from '../services/document-extraction.service
 
 export class DocumentExtractionController {
   constructor(
-    @inject('services.DocumentExtractionService')
+    @inject('service.documentExtraction.service')
     private documentExtractionService: DocumentExtractionService,
   ) { }
 
