@@ -56,8 +56,8 @@ export class TrusteeProfilesController {
   ): Promise<{success: boolean; message: string; currentProgress: string[]; profile: TrusteeProfiles | null}> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const response: any = await this.sessionService.fetchProfile(sessionId);
-
-    if (response.success && response.profile?.id) {
+    console.log('response', response);
+    if (response.success && response.profile.id) {
       const trusteeProfile = await this.trusteeProfilesRepository.findOne({
         where: {
           and: [
