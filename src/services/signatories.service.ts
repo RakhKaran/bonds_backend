@@ -1,5 +1,6 @@
 import {inject} from '@loopback/core';
 import {repository} from '@loopback/repository';
+import {HttpErrors} from '@loopback/rest';
 import {AuthorizeSignatories} from '../models';
 import {AuthorizeSignatoriesRepository} from '../repositories';
 import {MediaService} from './media.service';
@@ -11,6 +12,102 @@ export class AuthorizeSignatoriesService {
     @inject('service.media.service')
     private mediaService: MediaService
   ) { }
+
+  // create single authorize signatory
+  async createAuthorizeSignatory(
+    signatory: Omit<AuthorizeSignatories, 'id'>
+  ): Promise<{
+    success: boolean;
+    message: string;
+    signatory: AuthorizeSignatories;
+  }> {
+    try {
+      // Check duplicates
+      const existing = await this.authorizeSignatoriesRepository.findOne({
+        where: {
+          and: [
+            {submittedPanNumber: signatory.submittedPanNumber},
+            {usersId: signatory.usersId},
+            {roleValue: signatory.roleValue},
+            {identifierId: signatory.identifierId},
+            {isActive: true},
+            {isDeleted: false},
+          ],
+        },
+      });
+
+      if (existing) {
+        throw new HttpErrors.BadRequest(
+          'Signatory with same PAN already exists'
+        );
+      }
+
+      // Prepare name checks
+      const extractedName = signatory.extractedPanFullName?.trim().toLowerCase();
+      const submittedName = signatory.submittedPanFullName?.trim().toLowerCase();
+      const fullName = signatory.fullName.trim().toLowerCase();
+
+      const nameMatches =
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+        (extractedName?.includes(fullName)) ||
+        (submittedName?.includes(fullName));
+
+      const hasOCR =
+        signatory.extractedPanNumber &&
+        signatory.extractedPanFullName &&
+        signatory.extractedDateOfBirth;
+
+      // ---------------------------------------------------------
+      // ✔ CASE 1 — AUTO MODE (OCR PRESENT)
+      // ---------------------------------------------------------
+      if (hasOCR) {
+        if (
+          signatory.extractedPanNumber === signatory.submittedPanNumber &&
+          nameMatches
+        ) {
+          signatory.mode = 0; // auto
+          signatory.status = 1; // approved
+          signatory.verifiedAt = new Date();
+
+          const created = await this.authorizeSignatoriesRepository.create(signatory);
+
+          return {
+            success: true,
+            message: 'Signatory created (auto approved)',
+            signatory: created,
+          };
+        }
+
+        throw new HttpErrors.BadRequest(
+          'Fullname or PAN mismatch with OCR data'
+        );
+      }
+
+      // ---------------------------------------------------------
+      // ✔ CASE 2 — MANUAL MODE
+      // ---------------------------------------------------------
+      if (submittedName?.includes(fullName)) {
+        signatory.mode = 1;
+        signatory.status = 0; // under review
+
+        const created = await this.authorizeSignatoriesRepository.create(signatory);
+
+        return {
+          success: true,
+          message: 'Signatory created (manual review)',
+          signatory: created,
+        };
+      }
+
+      throw new HttpErrors.BadRequest(
+        'Fullname does not match with PAN card'
+      );
+
+    } catch (err) {
+      console.error('Error while creating signatory:', err);
+      throw err;
+    }
+  }
 
   // create new authorize signatories...
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -44,6 +141,7 @@ export class AuthorizeSignatoriesService {
       const fullName = signatory.fullName.trim().toLowerCase();
 
       const nameMatches =
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
         (extractedName?.includes(fullName)) ||
         (submittedPanName?.includes(fullName));
 

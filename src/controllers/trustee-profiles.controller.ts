@@ -291,4 +291,94 @@ export class TrusteeProfilesController {
     }
   }
 
+  // for trustees but without login just for KYC
+  @post('/trustee-profiles/kyc-authorize-signatory')
+  async uploadAuthorizeSignatory(
+    @requestBody({
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            required: ['usersId', 'signatory'],
+            properties: {
+              usersId: {type: 'string'},
+              signatory: {
+                type: 'object',
+                required: ['fullName', 'email', 'phone', 'submittedPanFullName', 'submittedPanNumber', 'submittedDateOfBirth', 'panCardFileId', 'boardResolutionFileId', 'designationType', 'designationValue'],
+                properties: {
+                  fullName: {type: 'string'},
+                  email: {type: 'string'},
+                  phone: {type: 'string'},
+                  extractedPanFullName: {type: 'string'},
+                  extractedPanNumber: {type: 'string'},
+                  extractedDateOfBirth: {type: 'string'},
+                  submittedPanFullName: {type: 'string'},
+                  submittedPanNumber: {type: 'string'},
+                  submittedDateOfBirth: {type: 'string'},
+                  panCardFileId: {type: 'string'},
+                  boardResolutionFileId: {type: 'string'},
+                  designationType: {type: 'string'},
+                  designationValue: {type: 'string'}
+                }
+              }
+            }
+          }
+        }
+      }
+    })
+    body: {
+      usersId: string;
+      signatory: {
+        fullName: string;
+        email: string;
+        phone: string;
+        extractedPanFullName?: string;
+        extractedPanNumber?: string;
+        extractedDateOfBirth?: string;
+        submittedPanFullName: string;
+        submittedPanNumber: string;
+        submittedDateOfBirth: string;
+        panCardFileId: string;
+        boardResolutionFileId: string;
+        designationType: string;
+        designationValue: string;
+      }
+    }
+  ): Promise<{
+    success: boolean;
+    message: string;
+    signatory: AuthorizeSignatories;
+    currentProgress: string[];
+  }> {
+    const tx = await this.trusteeProfilesRepository.dataSource.beginTransaction({IsolationLevel: IsolationLevel.READ_COMMITTED});
+
+    try {
+      const trustee = await this.trusteeProfilesRepository.findOne(
+        {where: {usersId: body.usersId, isDeleted: false}},
+        {transaction: tx}
+      );
+
+      if (!trustee) throw new HttpErrors.NotFound("Trustee not found");
+
+      const signatoriesData = new AuthorizeSignatories({
+        ...body.signatory,
+        usersId: body.usersId,
+        roleValue: "trustee",
+        identifierId: trustee.id,
+        isActive: true,
+        isDeleted: false
+      });
+
+      const result = await this.authorizeSignatoriesService.createAuthorizeSignatory(signatoriesData);
+
+      const currentProgress = await this.updateKycProgress(trustee.kycApplicationsId, "trustee_authorized_signatories");
+
+      await tx.commit();
+      return {...result, currentProgress};
+
+    } catch (err) {
+      await tx.rollback();
+      throw err;
+    }
+  }
 }
