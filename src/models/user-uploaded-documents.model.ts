@@ -60,7 +60,7 @@ export class UserUploadedDocuments extends Entity {
     type: 'number',
     required: true,
     jsonSchema: {
-      enum: [0, 1, 2, 3],  // 0 => under review, 1 => approved 2 => rejected,
+      enum: [0, 1, 2],  // 0 => under review, 1 => approved 2 => rejected,
     },
   })
   status: number;   // 0 => under review, 1 => approved 2 => rejected,

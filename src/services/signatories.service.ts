@@ -258,4 +258,45 @@ export class AuthorizeSignatoriesService {
       erroredAuthrizeSignatories
     };
   }
+
+  // update signatory status
+  async updateSignatoryStatus(signatoryId: string, status: number, reason: string): Promise<{success: boolean; message: string}> {
+    const existingSignatory = await this.authorizeSignatoriesRepository.findById(signatoryId);
+
+    if (!existingSignatory) {
+      throw new HttpErrors.NotFound('No Authorize signatory found');
+    }
+
+    const statusOptions = [0, 1, 2];
+
+    if (!statusOptions.includes(status)) {
+      throw new HttpErrors.BadRequest('Invalid status');
+    }
+
+    if (status === 1) {
+      await this.authorizeSignatoriesRepository.updateById(existingSignatory.id, {status: 1, verifiedAt: new Date()});
+      return {
+        success: true,
+        message: 'Authorize signatory Approved'
+      }
+    }
+
+    if (status === 2) {
+      await this.authorizeSignatoriesRepository.updateById(existingSignatory.id, {status: 2, reason: reason});
+      return {
+        success: true,
+        message: 'Authorize signatory Rejected'
+      }
+    }
+
+    if (status === 3) {
+      await this.authorizeSignatoriesRepository.updateById(existingSignatory.id, {status: 0});
+      return {
+        success: true,
+        message: 'Authorize signatory status is in under review'
+      }
+    }
+
+    throw new HttpErrors.BadRequest('invalid status');
+  }
 }

@@ -141,4 +141,44 @@ export class UserUploadedDocumentsService {
       uploadedDocuments: uploadedDocuments
     };
   }
+
+  async updateDocumentStatus(documentId: string, status: number, reason: string): Promise<{success: boolean; message: string}> {
+    const existingDocument = await this.userUploadedDocumentsRepository.findById(documentId);
+
+    if (!existingDocument) {
+      throw new HttpErrors.NotFound('No document found');
+    }
+
+    const statusOptions = [0, 1, 2];
+
+    if (!statusOptions.includes(status)) {
+      throw new HttpErrors.BadRequest('Invalid status');
+    }
+
+    if (status === 1) {
+      await this.userUploadedDocumentsRepository.updateById(existingDocument.id, {status: 1, verifiedAt: new Date()});
+      return {
+        success: true,
+        message: 'Document Approved'
+      }
+    }
+
+    if (status === 2) {
+      await this.userUploadedDocumentsRepository.updateById(existingDocument.id, {status: 2, reason: reason});
+      return {
+        success: true,
+        message: 'Document Rejected'
+      }
+    }
+
+    if (status === 3) {
+      await this.userUploadedDocumentsRepository.updateById(existingDocument.id, {status: 0});
+      return {
+        success: true,
+        message: 'Document status is in under review'
+      }
+    }
+
+    throw new HttpErrors.BadRequest('invalid status');
+  }
 }

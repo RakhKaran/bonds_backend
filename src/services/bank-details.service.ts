@@ -91,4 +91,45 @@ export class BankDetailsService {
       accounts: bankAccounts
     }
   }
+
+  // update account status
+  async updateAccountStatus(accountId: string, status: number, reason: string): Promise<{success: boolean; message: string}> {
+    const existingAccount = await this.bankDetailsRepository.findById(accountId);
+
+    if (!existingAccount) {
+      throw new HttpErrors.NotFound('No Account found');
+    }
+
+    const statusOptions = [0, 1, 2];
+
+    if (!statusOptions.includes(status)) {
+      throw new HttpErrors.BadRequest('Invalid status');
+    }
+
+    if (status === 1) {
+      await this.bankDetailsRepository.updateById(existingAccount.id, {status: 1, verifiedAt: new Date()});
+      return {
+        success: true,
+        message: 'Bank Account Approved'
+      }
+    }
+
+    if (status === 2) {
+      await this.bankDetailsRepository.updateById(existingAccount.id, {status: 2, reason: reason});
+      return {
+        success: true,
+        message: 'Bank Account Rejected'
+      }
+    }
+
+    if (status === 3) {
+      await this.bankDetailsRepository.updateById(existingAccount.id, {status: 0});
+      return {
+        success: true,
+        message: 'Bank account status is in under review'
+      }
+    }
+
+    throw new HttpErrors.BadRequest('invalid status');
+  }
 }

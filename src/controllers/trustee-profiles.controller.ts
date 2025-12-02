@@ -1,6 +1,8 @@
+import {authenticate} from '@loopback/authentication';
 import {inject} from '@loopback/core';
-import {IsolationLevel, repository} from '@loopback/repository';
-import {get, HttpErrors, param, post, requestBody} from '@loopback/rest';
+import {Filter, IsolationLevel, repository} from '@loopback/repository';
+import {get, HttpErrors, param, patch, post, requestBody} from '@loopback/rest';
+import {authorize} from '../authorization';
 import {AuthorizeSignatories, BankDetails, TrusteeProfiles, UserUploadedDocuments} from '../models';
 import {KycApplicationsRepository, TrusteeProfilesRepository} from '../repositories';
 import {BankDetailsService} from '../services/bank-details.service';
@@ -498,5 +500,166 @@ export class TrusteeProfilesController {
       await tx.rollback();
       throw err;
     }
+  }
+
+  // Get trustee profiles...
+  @authenticate('jwt')
+  @authorize({roles: ['super_admin']})
+  @get('/trustee-profiles')
+  async getTrusteeProfiles(
+    @param.filter(TrusteeProfiles) filter?: Filter<TrusteeProfiles>,
+  ): Promise<{
+    success: boolean;
+    message: string;
+    data: {
+      count: number;
+      profiles: TrusteeProfiles[];
+    }
+  }> {
+    const trustees = await this.trusteeProfilesRepository.find({
+      ...filter,
+      limit: filter?.limit ?? 10,
+      skip: filter?.skip ?? 0,
+      include: [
+        {relation: 'users', scope: {fields: {id: true, phone: true, email: true}}},
+        {relation: 'kycApplications', scope: {fields: {id: true, usersId: true, status: true, mode: true}}},
+        {relation: 'trusteeEntityTypes'},
+        {relation: 'trusteeLogo', scope: {fields: {id: true, fileOriginalName: true, fileUrl: true}}},
+      ]
+    });
+
+    const totalCount = await this.trusteeProfilesRepository.count(filter?.where);
+
+    return {
+      success: true,
+      message: 'Trustee Profiles',
+      data: {
+        count: totalCount.count,
+        profiles: trustees
+      }
+    }
+  }
+
+  // Get trustee profiles by id...
+  @authenticate('jwt')
+  @authorize({roles: ['super_admin']})
+  @get('/trustee-profiles/{id}')
+  async getCompanyProfile(
+    @param.path.string('id') id: string,
+    @param.filter(TrusteeProfiles) filter?: Filter<TrusteeProfiles>,
+  ): Promise<{
+    success: boolean;
+    message: string;
+    data: TrusteeProfiles;
+  }> {
+    const trustee = await this.trusteeProfilesRepository.findById(id, {
+      ...filter,
+      include: [
+        {relation: 'users', scope: {fields: {id: true, phone: true, email: true}}},
+        {relation: 'kycApplications'},
+        {relation: 'trusteePanCards', scope: {include: [{relation: 'panCardDocument', scope: {fields: {fileUrl: true, id: true, fileOriginalName: true, fileType: true}}}]}},
+        {relation: 'trusteeEntityTypes'},
+        {relation: 'trusteeLogo', scope: {fields: {id: true, fileOriginalName: true, fileUrl: true}}},
+      ]
+    });
+
+    return {
+      success: true,
+      message: 'Trustee Profile',
+      data: trustee
+    }
+  }
+
+  // super admin trustee documents approval API
+  @authenticate('jwt')
+  @authorize({roles: ['super_admin']})
+  @patch('/trustee-profiles/document-verification')
+  async documentVerification(
+    @requestBody({
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            required: ['status', 'documentId'],
+            properties: {
+              status: {type: 'number'},
+              documentId: {type: 'string'},
+              reason: {type: 'string'}
+            }
+          }
+        }
+      }
+    })
+    body: {
+      status: number;
+      documentId: string;
+      reason?: string;
+    }
+  ): Promise<{success: boolean; message: string}> {
+    const result = await this.userUploadDocumentsService.updateDocumentStatus(body.documentId, body.status, body.reason ?? '');
+
+    return result;
+  }
+
+  // super admin trustee bank account approval API
+  @authenticate('jwt')
+  @authorize({roles: ['super_admin']})
+  @patch('/trustee-profiles/bank-account-verification')
+  async bankAccountVerification(
+    @requestBody({
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            required: ['status', 'accountId'],
+            properties: {
+              status: {type: 'number'},
+              accountId: {type: 'string'},
+              reason: {type: 'string'}
+            }
+          }
+        }
+      }
+    })
+    body: {
+      status: number;
+      accountId: string;
+      reason?: string;
+    }
+  ): Promise<{success: boolean; message: string}> {
+    const result = await this.bankDetailsService.updateAccountStatus(body.accountId, body.status, body.reason ?? '');
+
+    return result;
+  }
+
+  // super admin trustee bank signatory approval API
+  @authenticate('jwt')
+  @authorize({roles: ['super_admin']})
+  @patch('/trustee-profiles/authorize-signatory-verification')
+  async authorizeSignatoryVerification(
+    @requestBody({
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            required: ['status', 'signatoryId'],
+            properties: {
+              status: {type: 'number'},
+              signatoryId: {type: 'string'},
+              reason: {type: 'string'}
+            }
+          }
+        }
+      }
+    })
+    body: {
+      status: number;
+      signatoryId: string;
+      reason?: string;
+    }
+  ): Promise<{success: boolean; message: string}> {
+    const result = await this.authorizeSignatoriesService.updateSignatoryStatus(body.signatoryId, body.status, body.reason ?? '');
+
+    return result;
   }
 }

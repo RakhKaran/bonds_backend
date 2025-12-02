@@ -1465,81 +1465,81 @@ export class AuthController {
     }
   }
 
-  // @post('/auth/company-login')
-  // async companyLogin(
-  //   @requestBody({
-  //     content: {
-  //       'application/json': {
-  //         schema: {
-  //           type: 'object',
-  //           required: ['email', 'password'],
-  //           properties: {
-  //             email: {type: 'string'},
-  //             password: {type: 'string'}
-  //           }
-  //         }
-  //       }
-  //     }
-  //   })
-  //   body: {email: string; password: string;}
-  // ): Promise<{success: boolean; message: string; accessToken: string; user: object}> {
-  //   const userData = await this.usersRepository.findOne({
-  //     where: {
-  //       and: [
-  //         {email: body.email},
-  //         {isDeleted: false}
-  //       ]
-  //     }
-  //   });
+  @post('/auth/trustee-login')
+  async trusteeLogin(
+    @requestBody({
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            required: ['email', 'password'],
+            properties: {
+              email: {type: 'string'},
+              password: {type: 'string'}
+            }
+          }
+        }
+      }
+    })
+    body: {email: string; password: string;}
+  ): Promise<{success: boolean; message: string; accessToken: string; user: object}> {
+    const userData = await this.usersRepository.findOne({
+      where: {
+        and: [
+          {email: body.email},
+          {isDeleted: false}
+        ]
+      }
+    });
 
-  //   if (!userData) {
-  //     throw new HttpErrors.BadRequest('User not exist');
-  //   }
+    if (!userData) {
+      throw new HttpErrors.BadRequest('User not exist');
+    }
 
-  //   const company = await this.companyProfilesRepository.findOne({
-  //     where: {
-  //       and: [
-  //         {usersId: userData.id},
-  //         {isActive: true},
-  //         {isDeleted: false}
-  //       ]
-  //     }
-  //   });
+    const trustee = await this.trusteeProfilesRepository.findOne({
+      where: {
+        and: [
+          {usersId: userData.id},
+          {isActive: true},
+          {isDeleted: false}
+        ]
+      }
+    });
 
-  //   if (!company) {
-  //     throw new HttpErrors.Unauthorized('Unauthorized access');
-  //   }
+    if (!trustee) {
+      throw new HttpErrors.Unauthorized('Unauthorized access');
+    }
 
-  //   const user = await this.userService.verifyCredentials(body);
+    const user = await this.userService.verifyCredentials(body);
 
-  //   const {roles, permissions} = await this.rbacService.getUserRoleAndPermissionsByRole(user.id!, 'company');
+    const {roles, permissions} = await this.rbacService.getUserRoleAndPermissionsByRole(user.id!, 'trustee');
 
-  //   if (!roles.includes('company')) {
-  //     throw new HttpErrors.Forbidden('Access denied. Only company users can login here.');
-  //   }
+    if (!roles.includes('trustee')) {
+      throw new HttpErrors.Forbidden('Access denied. Only Trustee can login here.');
+    }
 
-  //   const userProfile: UserProfile & {
-  //     roles: string[];
-  //     permissions: string[];
-  //     phone: string;
-  //   } = {
-  //     [securityId]: user.id!,
-  //     id: user.id!,
-  //     email: user.email,
-  //     phone: user.phone,
-  //     roles,
-  //     permissions,
-  //   };
+    const userProfile: UserProfile & {
+      roles: string[];
+      permissions: string[];
+      phone: string;
+    } = {
+      [securityId]: user.id!,
+      id: user.id!,
+      email: user.email,
+      phone: user.phone,
+      roles,
+      permissions,
+    };
 
-  //   const token = await this.jwtService.generateToken(userProfile);
-  //   const profile = await this.rbacService.returnCompanyProfile(user.id, roles, permissions);
-  //   return {
-  //     success: true,
-  //     message: "Company login successful",
-  //     accessToken: token,
-  //     user: profile
-  //   };
-  // }
+    const token = await this.jwtService.generateToken(userProfile);
+    const profile = await this.rbacService.returnTrusteeProfile(user.id, roles, permissions);
+    return {
+      success: true,
+      message: "Trustee login successful",
+      accessToken: token,
+      user: profile
+    };
+  }
 
   // ------------------------------------------Approve KYC--------------------------------------------
   @authenticate('jwt')
@@ -1554,7 +1554,8 @@ export class AuthController {
             required: ['applicationId', 'status'],
             properties: {
               applicationId: {type: 'string'},
-              status: {type: 'number'}
+              status: {type: 'number'},
+              reason: {type: 'string'}
             }
           }
         }
@@ -1563,6 +1564,7 @@ export class AuthController {
     body: {
       applicationId: string;
       status: number;
+      reason?: string;
     }
   ): Promise<{success: boolean; message: string}> {
 
@@ -1596,6 +1598,23 @@ export class AuthController {
           kycApplication.id,
           kycApplication.identifierId,
           body.status,
+          body.reason ?? '',
+          tx
+        );
+
+        await tx.commit();
+        return {
+          success: true,
+          message: result.message
+        };
+      }
+
+      if (kycApplication.roleValue === 'trustee') {
+        result = await this.handleTrusteeKycApplication(
+          kycApplication.id,
+          kycApplication.identifierId,
+          body.status,
+          body.reason ?? '',
           tx
         );
 
@@ -1620,6 +1639,7 @@ export class AuthController {
     applicationId: string,
     companyId: string,
     status: number,
+    reason: string,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     tx: any
   ) {
@@ -1655,7 +1675,7 @@ export class AuthController {
         return {
           success: true,
           message: 'Company KYC approved successfully',
-          kycStatus: 1
+          kycStatus: 2
         };
       }
 
@@ -1667,12 +1687,81 @@ export class AuthController {
           {transaction: tx}
         );
 
-        await this.companyPanCardsRepository.updateById(companyPanCard?.id, {status: 1})
+        await this.companyPanCardsRepository.updateById(companyPanCard?.id, {status: 2, reason: reason})
 
         return {
           success: true,
           message: 'Company KYC rejected',
+          kycStatus: 3
+        };
+      }
+
+      throw new HttpErrors.BadRequest('Invalid status value');
+
+    } catch (error) {
+      console.log('error in handleCompanyKycApplication:', error);
+      throw error;
+    }
+  }
+
+  async handleTrusteeKycApplication(
+    applicationId: string,
+    trusteeId: string,
+    status: number,
+    reason: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    tx: any
+  ) {
+    try {
+      const trusteePanCard = await this.trusteePanCardsRepository.findOne(
+        {
+          where: {trusteeProfilesId: trusteeId},
+          order: ['createdAt DESC']
+        }
+      );
+
+      if (!trusteePanCard || !trusteePanCard.id) {
+        throw new HttpErrors.NotFound('Unable to fetch pan card details');
+      }
+
+      // update kyc application
+      await this.kycApplicationsRepository.updateById(
+        applicationId,
+        {status, verifiedAt: new Date()},
+        {transaction: tx}
+      );
+
+      // APPROVED
+      if (status === 2) {
+        await this.trusteeProfilesRepository.updateById(
+          trusteeId,
+          {isActive: true},
+          {transaction: tx}
+        );
+
+        await this.trusteePanCardsRepository.updateById(trusteePanCard?.id, {status: 1, verifiedAt: new Date()})
+
+        return {
+          success: true,
+          message: 'Trustee KYC approved successfully',
           kycStatus: 2
+        };
+      }
+
+      // REJECTED
+      if (status === 3) {
+        await this.trusteeProfilesRepository.updateById(
+          trusteeId,
+          {isActive: false},
+          {transaction: tx}
+        );
+
+        await this.trusteePanCardsRepository.updateById(trusteePanCard?.id, {status: 2, reason: reason})
+
+        return {
+          success: true,
+          message: 'Company KYC rejected',
+          kycStatus: 3
         };
       }
 

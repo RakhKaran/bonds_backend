@@ -6,6 +6,7 @@ import {
   PermissionsRepository,
   RolePermissionsRepository,
   RolesRepository,
+  TrusteeProfilesRepository,
   UserRolesRepository,
   UsersRepository,
 } from '../repositories';
@@ -25,6 +26,8 @@ export class RbacService {
     private rolePermRepo: RolePermissionsRepository,
     @repository(PermissionsRepository)
     private permRepo: PermissionsRepository,
+    @repository(TrusteeProfilesRepository)
+    private trusteeProfilesRepository: TrusteeProfilesRepository
   ) { }
 
   // --------------------------------------------validate profile------------------------------------
@@ -145,6 +148,27 @@ export class RbacService {
     });
     return {
       companyName: company?.companyName,
+      email: user.email,
+      phone: user.phone,
+      isActive: user.isActive,
+      roles,
+      permissions
+    }
+  }
+
+  async returnTrusteeProfile(userId: string, roles: string[], permissions: string[]) {
+    const user = await this.usersRepository.findById(userId);
+    const trustee = await this.trusteeProfilesRepository.findOne({
+      where: {
+        and: [
+          {usersId: user.id},
+          {isActive: true},
+          {isDeleted: false}
+        ]
+      }
+    });
+    return {
+      companyName: trustee?.legalEntityName,
       email: user.email,
       phone: user.phone,
       isActive: user.isActive,
