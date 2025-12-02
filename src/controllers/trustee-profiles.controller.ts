@@ -1,6 +1,6 @@
 import {inject} from '@loopback/core';
 import {IsolationLevel, repository} from '@loopback/repository';
-import {getModelSchemaRef, HttpErrors, post, requestBody} from '@loopback/rest';
+import {HttpErrors, post, requestBody} from '@loopback/rest';
 import {AuthorizeSignatories, BankDetails, UserUploadedDocuments} from '../models';
 import {KycApplicationsRepository, TrusteeProfilesRepository} from '../repositories';
 import {BankDetailsService} from '../services/bank-details.service';
@@ -123,13 +123,42 @@ export class TrusteeProfilesController {
             required: ['usersId', 'bankDetails'],
             properties: {
               usersId: {type: 'string'},
-              bankDetails: getModelSchemaRef(BankDetails, {partial: true})
+              bankDetails: {
+                type: 'object',
+                required: ['bankName', 'bankShortCode', 'ifscCode', 'branchName', 'bankAddress', 'accountType', 'accountHolderName', 'accountNumber', 'bankAccountProofType', 'bankAccountProofId'],
+                properties: {
+                  bankName: {type: 'string'},
+                  bankShortCode: {type: 'string'},
+                  ifscCode: {type: 'string'},
+                  branchName: {type: 'string'},
+                  bankAddress: {type: 'string'},
+                  accountType: {type: 'number'},
+                  accountHolderName: {type: 'string'},
+                  accountNumber: {type: 'string'},
+                  bankAccountProofType: {type: 'number'},
+                  bankAccountProofId: {type: 'string'}
+                }
+              }
             }
           }
         }
       }
     })
-    body: {usersId: string; bankDetails: Partial<BankDetails>}
+    body: {
+      usersId: string;
+      bankDetails: {
+        bankName: string;
+        bankShortCode: string;
+        ifscCode: string;
+        branchName: string;
+        bankAddress: string;
+        accountType: number;
+        accountHolderName: string;
+        accountNumber: string;
+        bankAccountProofType: number;
+        bankAccountProofId: string;
+      }
+    }
   ): Promise<{
     success: boolean;
     message: string;
@@ -142,7 +171,13 @@ export class TrusteeProfilesController {
 
     if (!trustee) throw new HttpErrors.NotFound("Trustee not found");
 
-    const bankData = new BankDetails(body.bankDetails);
+    const bankData = new BankDetails({
+      ...body.bankDetails,
+      usersId: body.usersId,
+      mode: 1,
+      status: 1,
+      roleValue: 'trustee'
+    });
 
     const result = await this.bankDetailsService.createNewBankAccount(bankData);
 
