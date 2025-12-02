@@ -1,6 +1,6 @@
-import {Entity, model, property, belongsTo} from '@loopback/repository';
-import {Users} from './users.model';
+import {belongsTo, Entity, model, property} from '@loopback/repository';
 import {Media} from './media.model';
+import {Users} from './users.model';
 
 @model({
   settings: {
@@ -82,7 +82,7 @@ export class BankDetails extends Entity {
       enum: [0, 1, 2], // 0=passbook, 1=cheque, 2=statement
     },
   })
-  bankAccountProof: number; // 0 => passbook 1 => cancelled cheque 2 => statement
+  bankAccountProofType: number; // 0 => passbook 1 => cancelled cheque 2 => statement
 
   @belongsTo(() => Media)
   bankAccountProofId: string;
