@@ -23,7 +23,7 @@ export class SessionService {
         and: [
           {email: sessionData.email},
           {phone: sessionData.phoneNumber},
-          {isActive: true},
+          // {isActive: true},
           {isDeleted: false}
         ]
       }

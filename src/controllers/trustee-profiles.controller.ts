@@ -56,12 +56,11 @@ export class TrusteeProfilesController {
   ): Promise<{success: boolean; message: string; currentProgress: string[]; profile: TrusteeProfiles | null}> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const response: any = await this.sessionService.fetchProfile(sessionId);
-    console.log('response', response);
-    if (response.success && response.profile.id) {
+    if (response.success && response?.profile?.id) {
       const trusteeProfile = await this.trusteeProfilesRepository.findOne({
         where: {
           and: [
-            {usersId: response.profile.id},
+            {usersId: response?.profile?.id},
             {isDeleted: false},
           ]
         }
@@ -103,7 +102,7 @@ export class TrusteeProfilesController {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): Promise<{success: boolean; message: string; data: any}> {
     const steppersAllowed = [
-      'trustee_document',
+      'trustee_documents',
       'trustee_bank_details',
       'trustee_authorized_signatories'
     ];
