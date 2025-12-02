@@ -63,7 +63,18 @@ export class DocumentTypesController {
                 isRequired: {type: 'string'},
                 description: {type: 'string'},
                 isActive: {type: 'boolean'},
-                isDeleted: {type: 'boolean'}
+                isDeleted: {type: 'boolean'},
+                fieldType: {type: 'string'},
+                options: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      option: {type: 'string'},
+                      value: {type: 'string'}
+                    }
+                  }
+                }
               }
             }
           }
@@ -79,6 +90,11 @@ export class DocumentTypesController {
         description: string;
         isActive: boolean;
         isDeleted: boolean;
+        fieldType: string;
+        options?: Array<{
+          option: {type: 'string'},
+          value: {type: 'string'}
+        }>
       }>
     },
   ): Promise<DocumentTypes> {
@@ -254,7 +270,18 @@ export class DocumentTypesController {
                 isRequired: {type: 'string'},
                 description: {type: 'string'},
                 isActive: {type: 'boolean'},
-                isDeleted: {type: 'boolean'}
+                isDeleted: {type: 'boolean'},
+                fieldType: {type: 'string'},
+                options: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      option: {type: 'string'},
+                      value: {type: 'string'}
+                    }
+                  }
+                }
               }
             }
           }
@@ -270,6 +297,11 @@ export class DocumentTypesController {
         description: string;
         isActive: boolean;
         isDeleted: boolean;
+        fieldType: string;
+        options?: Array<{
+          option: {type: 'string'},
+          value: {type: 'string'}
+        }>
       }>
     },
   ): Promise<void> {

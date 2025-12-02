@@ -37,6 +37,22 @@ export class DocumentPlaceholders extends Entity {
   fieldValue: string;
 
   @property({
+    type: 'string',
+    required: true,
+    jsonSchema: {enum: ['text', 'select']}
+  })
+  fieldType: string;
+
+  @property({
+    type: 'array',
+    itemType: 'object',
+  })
+  options?: Array<{
+    option: string;
+    value: string;
+  }>
+
+  @property({
     type: 'boolean',
     required: true
   })
