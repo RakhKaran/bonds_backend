@@ -71,4 +71,24 @@ export class BankDetailsService {
       throw error;
     }
   }
+
+  // fetch user bank accounts...
+  async fetchUserBankAccounts(usersId: string, roleValue: string): Promise<{success: boolean; message: string; accounts: BankDetails[]}> {
+    const bankAccounts = await this.bankDetailsRepository.find({
+      where: {
+        and: [
+          {usersId: usersId},
+          {roleValue: roleValue},
+          {isActive: true},
+          {isDeleted: false}
+        ]
+      }
+    });
+
+    return {
+      success: true,
+      message: 'Bank accounts',
+      accounts: bankAccounts
+    }
+  }
 }

@@ -23,6 +23,7 @@ import {UserUploadedDocumentsService} from './services/user-documents.service';
 import {MyUserService} from './services/user-service';
 import {BankDetailsService} from './services/bank-details.service';
 import {AuthorizeSignatoriesService} from './services/signatories.service';
+import {SessionService} from './services/session.service';
 
 export {ApplicationConfig};
 
@@ -73,6 +74,7 @@ export class BondsBackendApplication extends BootMixin(
     this.bind('service.userUploadedDocuments.service').toClass(UserUploadedDocumentsService);
     this.bind('service.bankDetails.service').toClass(BankDetailsService);
     this.bind('services.AuthorizeSignatoriesService.service').toClass(AuthorizeSignatoriesService);
+    this.bind('service.session.service').toClass(SessionService);
     this.bind(EmailManagerBindings.SEND_MAIL).toClass(EmailService);
   }
 

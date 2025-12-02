@@ -13,6 +13,35 @@ export class AuthorizeSignatoriesService {
     private mediaService: MediaService
   ) { }
 
+  // fetch authorize signatories...
+  async fetchAuthorizeSignatories(usersId: string, roleValue: string, identifierId: string): Promise<{
+    success: boolean;
+    message: string;
+    signatories: AuthorizeSignatories[]
+  }> {
+    const authorizeSignatories = await this.authorizeSignatoriesRepository.find({
+      where: {
+        and: [
+          {usersId: usersId},
+          {roleValue: roleValue},
+          {identifierId: identifierId},
+          {isActive: true},
+          {isDeleted: false}
+        ]
+      },
+      include: [
+        {relation: 'panCardFile', scope: {fields: {id: true, fileUrl: true, fileOriginalName: true}}},
+        {relation: 'boardResolutionFile', scope: {fields: {id: true, fileUrl: true, fileOriginalName: true}}},
+      ],
+    });
+
+    return {
+      success: true,
+      message: 'Authorize signatories',
+      signatories: authorizeSignatories
+    }
+  }
+
   // create single authorize signatory
   async createAuthorizeSignatory(
     signatory: Omit<AuthorizeSignatories, 'id'>

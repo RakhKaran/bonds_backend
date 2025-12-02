@@ -1,9 +1,10 @@
 import {inject} from '@loopback/core';
 import {IsolationLevel, repository} from '@loopback/repository';
-import {HttpErrors, post, requestBody} from '@loopback/rest';
-import {AuthorizeSignatories, BankDetails, UserUploadedDocuments} from '../models';
+import {get, HttpErrors, param, post, requestBody} from '@loopback/rest';
+import {AuthorizeSignatories, BankDetails, TrusteeProfiles, UserUploadedDocuments} from '../models';
 import {KycApplicationsRepository, TrusteeProfilesRepository} from '../repositories';
 import {BankDetailsService} from '../services/bank-details.service';
+import {SessionService} from '../services/session.service';
 import {AuthorizeSignatoriesService} from '../services/signatories.service';
 import {UserUploadedDocumentsService} from '../services/user-documents.service';
 
@@ -19,6 +20,8 @@ export class TrusteeProfilesController {
     private bankDetailsService: BankDetailsService,
     @inject('services.AuthorizeSignatoriesService.service')
     private authorizeSignatoriesService: AuthorizeSignatoriesService,
+    @inject('service.session.service')
+    private sessionService: SessionService,
   ) { }
 
   // trustee flow will be like => Basic info, documents, bank details, authorize signatories, bank account details, agreement, verification.
@@ -44,6 +47,122 @@ export class TrusteeProfilesController {
     }
 
     return progress;
+  }
+
+  // for trustees get current progress at start...
+  @get('/trustee-profiles/kyc-progress/{sessionId}')
+  async getTrusteeProfileKycProgress(
+    @param.path.string('sessionId') sessionId: string
+  ): Promise<{success: boolean; message: string; currentProgress: string[]; profile: TrusteeProfiles | null}> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response: any = await this.sessionService.fetchProfile(sessionId);
+
+    if (response.success && response.profile?.id) {
+      const trusteeProfile = await this.trusteeProfilesRepository.findOne({
+        where: {
+          and: [
+            {usersId: response.profile.id},
+            {isDeleted: false},
+          ]
+        }
+      });
+
+      if (!trusteeProfile) {
+        return {
+          success: true,
+          message: 'New Profile',
+          currentProgress: [],
+          profile: null
+        }
+      }
+
+      const currentProgress = await this.getKycApplicationStatus(trusteeProfile.kycApplicationsId);
+
+      return {
+        success: true,
+        message: 'New Profile',
+        currentProgress: currentProgress,
+        profile: trusteeProfile
+      }
+    }
+
+    return {
+      success: true,
+      message: 'New Profile',
+      currentProgress: [],
+      profile: null
+    }
+  }
+
+  // fetch trustee info with stepper...
+  @get('/trustee-profiles/kyc-get-data/{stepperId}/{trusteeId}')
+  async getTrusteeProfileKycData(
+    @param.path.string('stepperId') stepperId: string,
+    @param.path.string('trusteeId') trusteeId: string,
+    @param.query.string('route') route?: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ): Promise<{success: boolean; message: string; data: any}> {
+    const steppersAllowed = [
+      'trustee_document',
+      'trustee_bank_details',
+      'trustee_authorized_signatories'
+    ];
+
+    if (!steppersAllowed.includes(stepperId)) {
+      throw new HttpErrors.BadRequest('Invalid stepper id');
+    }
+
+    const trusteeProfile = await this.trusteeProfilesRepository.findById(trusteeId);
+
+    if (!trusteeProfile) {
+      throw new HttpErrors.NotFound('Trustee not found');
+    }
+
+    const currentProgress = await this.getKycApplicationStatus(trusteeProfile.kycApplicationsId);
+
+    if (!currentProgress.includes(stepperId)) {
+      throw new HttpErrors.BadRequest('Please complete the steps');
+    }
+
+    if (stepperId === 'trustee_documents') {
+      if (!route) {
+        throw new HttpErrors.NotFound('Params are missing');
+      }
+
+      const documentsResponse = await this.userUploadDocumentsService.fetchDocuments(trusteeProfile.usersId, trusteeProfile.id, 'trustee', route);
+
+      return {
+        success: true,
+        message: 'Documents Data',
+        data: documentsResponse.documents
+      }
+    }
+
+    if (stepperId === 'trustee_bank_details') {
+      const bankDetailsResponse = await this.bankDetailsService.fetchUserBankAccounts(trusteeProfile.usersId, 'trustee');
+
+      return {
+        success: true,
+        message: 'Bank accounts',
+        data: bankDetailsResponse.accounts
+      }
+    }
+
+    if (stepperId === 'trustee_authorized_signatories') {
+      const signatoriesResponse = await this.authorizeSignatoriesService.fetchAuthorizeSignatories(trusteeProfile.usersId, 'trustee', trusteeProfile.id);
+
+      return {
+        success: true,
+        message: 'Bank accounts',
+        data: signatoriesResponse.signatories
+      }
+    }
+
+    return {
+      success: false,
+      message: 'No Step found',
+      data: null
+    }
   }
 
   // for trustees but without login just for KYC
