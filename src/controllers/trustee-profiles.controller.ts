@@ -102,10 +102,10 @@ export class TrusteeProfilesController {
   }
 
   // fetch trustee info with stepper...
-  @get('/trustee-profiles/kyc-get-data/{stepperId}/{trusteeId}')
+  @get('/trustee-profiles/kyc-get-data/{stepperId}/{usersId}')
   async getTrusteeProfileKycData(
     @param.path.string('stepperId') stepperId: string,
-    @param.path.string('trusteeId') trusteeId: string,
+    @param.path.string('usersId') usersId: string,
     @param.query.string('route') route?: string,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): Promise<{success: boolean; message: string; data: any}> {
@@ -119,7 +119,14 @@ export class TrusteeProfilesController {
       throw new HttpErrors.BadRequest('Invalid stepper id');
     }
 
-    const trusteeProfile = await this.trusteeProfilesRepository.findById(trusteeId);
+    const trusteeProfile = await this.trusteeProfilesRepository.findOne({
+      where: {
+        and: [
+          {usersId: usersId},
+          {isDeleted: false}
+        ]
+      }
+    });
 
     if (!trusteeProfile) {
       throw new HttpErrors.NotFound('Trustee not found');
@@ -160,7 +167,7 @@ export class TrusteeProfilesController {
 
       return {
         success: true,
-        message: 'Bank accounts',
+        message: 'Authorize signatories',
         data: signatoriesResponse.signatories
       }
     }
@@ -309,7 +316,7 @@ export class TrusteeProfilesController {
 
     const currentProgress = await this.updateKycProgress(trustee.kycApplicationsId, "trustee_bank_details");
 
-    return {...result, currentProgress};;
+    return {...result, currentProgress};
   }
 
   // for trustees but without login just for KYC
