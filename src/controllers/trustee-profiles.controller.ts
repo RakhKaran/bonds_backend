@@ -65,7 +65,13 @@ export class TrusteeProfilesController {
             {usersId: response?.profile?.id},
             {isDeleted: false},
           ]
-        }
+        },
+        include: [
+          {relation: 'trusteePanCards', scope: {include: [{relation: 'panCardDocument', scope: {fields: {fileUrl: true, id: true, fileOriginalName: true, fileType: true}}}]}},
+          {relation: 'trusteeEntityTypes'},
+          {relation: 'users', scope: {fields: {id: true, phone: true, email: true}}},
+          {relation: 'kycApplications', scope: {fields: {id: true, status: true, verifiedAt: true, reason: true}}},
+        ]
       });
 
       if (!trusteeProfile) {
