@@ -82,7 +82,10 @@ export class BankDetailsService {
           {isActive: true},
           {isDeleted: false}
         ]
-      }
+      },
+      include: [
+        {relation: 'bankAccountProof', scope: {fields: {id: true, fileUrl: true, fileOriginalName: true}}}
+      ]
     });
 
     return {
