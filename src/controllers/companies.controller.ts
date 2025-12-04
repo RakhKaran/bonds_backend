@@ -317,11 +317,13 @@ export class CompaniesController {
     const company = await this.companyProfilesRepository.findOne({
       where: {
         and: [
-          {usersId: currentUser.usersId},
+          {usersId: currentUser.id},
           {isDeleted: false}
         ]
       }
     });
+
+    console.log('company Data', company);
 
     if (!company) throw new HttpErrors.NotFound("Company not found");
 
@@ -506,7 +508,7 @@ export class CompaniesController {
       const company = await this.companyProfilesRepository.findOne({
         where: {
           and: [
-            {usersId: currentUser.usersId},
+            {usersId: currentUser.id},
             {isDeleted: false}
           ]
         }
