@@ -860,6 +860,8 @@ export class AuthController {
           stateOfIncorporation: body.stateOfIncorporation,
           countryOfIncorporation: body.countryOfIncorporation,
           udyamRegistrationNumber: body.udyamRegistrationNumber,
+          companyEntityTypeId: body.companyEntityTypeId,
+          companySectorTypeId: body.companySectorTypeId,
           isActive: false,
           isDeleted: false,
         },
