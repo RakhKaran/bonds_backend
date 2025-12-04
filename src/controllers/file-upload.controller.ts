@@ -17,6 +17,7 @@ import {promisify} from 'util';
 import {FILE_UPLOAD_SERVICE, STORAGE_DIRECTORY} from '../keys';
 import {MediaRepository} from '../repositories';
 import {FileUploadHandler} from '../types';
+import * as mime from 'mime-types';
 
 const readdir = promisify(fs.readdir);
 
@@ -247,18 +248,20 @@ export class FileUploadController {
     return new Promise<void>((resolve) => {
       fs.readFile(file, (err, data) => {
         if (err) {
-          response.status(404).send('Something Went Wrong');
+          response.status(404).send('File not found');
           return resolve();
         }
 
-        response.setHeader('Content-Type', 'application/octet-stream');
-        response.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-        response.status(200).end(data);
+        const contentType = mime.lookup(fileName) || 'application/octet-stream';
+        response.setHeader('Content-Type', contentType);
 
+        // ❌ No Content-Disposition (browser will preview if possible)
+        response.status(200).end(data);
         resolve();
       });
     });
   }
+
 
   /**
    * Validate file names to prevent them goes beyond the designated directory
