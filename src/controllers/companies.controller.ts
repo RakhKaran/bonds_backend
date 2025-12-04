@@ -142,7 +142,7 @@ export class CompaniesController {
           schema: {
             type: 'object',
             properties: {
-              companyLogoId: {type: 'string'},
+              companyLogo: {type: 'string'},
               companyAbout: {type: 'string'}
             }
           }
@@ -150,8 +150,8 @@ export class CompaniesController {
       }
     })
     body: {
-      companyLogoId: string;
-      companyAbout: string;
+      companyLogo?: string;
+      companyAbout?: string;
     }
   ): Promise<{
     success: boolean;
