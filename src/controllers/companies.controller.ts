@@ -315,7 +315,12 @@ export class CompaniesController {
     account: BankDetails;
   }> {
     const company = await this.companyProfilesRepository.findOne({
-      where: {usersId: currentUser.usersId, isDeleted: false}
+      where: {
+        and: [
+          {usersId: currentUser.usersId},
+          {isDeleted: false}
+        ]
+      }
     });
 
     if (!company) throw new HttpErrors.NotFound("Company not found");
@@ -498,8 +503,14 @@ export class CompaniesController {
     const tx = await this.companyProfilesRepository.dataSource.beginTransaction({IsolationLevel: IsolationLevel.READ_COMMITTED});
 
     try {
-      const company = await this.companyProfilesRepository.findOne(
-        {where: {usersId: currentUser.usersId, isDeleted: false}},
+      const company = await this.companyProfilesRepository.findOne({
+        where: {
+          and: [
+            {usersId: currentUser.usersId},
+            {isDeleted: false}
+          ]
+        }
+      },
         {transaction: tx}
       );
 
