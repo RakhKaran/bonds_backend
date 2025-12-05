@@ -159,7 +159,7 @@ export class AdminProfilesController {
       throw new HttpErrors.NotFound('Trustee not found');
     }
 
-    const documentsResponse = await this.userUploadDocumentsService.fetchDocumentsWithUser(trusteeProfile.usersId, 'trustee', trusteeProfile.id);
+    const documentsResponse = await this.userUploadDocumentsService.fetchDocumentsWithUser(trusteeProfile.usersId, trusteeProfile.id, 'trustee');
 
     return {
       success: true,
