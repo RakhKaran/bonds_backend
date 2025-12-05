@@ -42,6 +42,37 @@ export class AuthorizeSignatoriesService {
     }
   }
 
+  // fetch authorize signatory...
+  async fetchAuthorizeSignatory(signatoryId: string): Promise<{
+    success: boolean;
+    message: string;
+    signatory: AuthorizeSignatories
+  }> {
+    const authorizeSignatory = await this.authorizeSignatoriesRepository.findOne({
+      where: {
+        and: [
+          {id: signatoryId},
+          {isActive: true},
+          {isDeleted: false}
+        ]
+      },
+      include: [
+        {relation: 'panCardFile', scope: {fields: {id: true, fileUrl: true, fileOriginalName: true}}},
+        {relation: 'boardResolutionFile', scope: {fields: {id: true, fileUrl: true, fileOriginalName: true}}},
+      ],
+    });
+
+    if (!authorizeSignatory) {
+      throw new HttpErrors.NotFound('Signatory not found');
+    }
+
+    return {
+      success: true,
+      message: 'Authorize signatories',
+      signatory: authorizeSignatory
+    }
+  }
+
   // create single authorize signatory
   async createAuthorizeSignatory(
     signatory: Omit<AuthorizeSignatories, 'id'>

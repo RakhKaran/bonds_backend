@@ -1,4 +1,4 @@
-import {authenticate} from '@loopback/authentication';
+import {authenticate, AuthenticationBindings} from '@loopback/authentication';
 import {inject} from '@loopback/core';
 import {Filter, IsolationLevel, repository} from '@loopback/repository';
 import {get, HttpErrors, param, patch, post, requestBody} from '@loopback/rest';
@@ -9,6 +9,7 @@ import {BankDetailsService} from '../services/bank-details.service';
 import {SessionService} from '../services/session.service';
 import {AuthorizeSignatoriesService} from '../services/signatories.service';
 import {UserUploadedDocumentsService} from '../services/user-documents.service';
+import {UserProfile} from '@loopback/security';
 
 export class TrusteeProfilesController {
   constructor(
@@ -674,5 +675,182 @@ export class TrusteeProfilesController {
     const result = await this.authorizeSignatoriesService.updateSignatoryStatus(body.signatoryId, body.status, body.reason ?? '');
 
     return result;
+  }
+
+  // fetch bank accounts...
+  @authenticate('jwt')
+  @authorize({roles: ['trustee']})
+  @get('/trustee-profiles/bank-details')
+  async fetchBankDetails(
+    @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
+  ): Promise<{success: boolean; message: string; bankDetails: BankDetails[]}> {
+    const trusteeProfile = await this.trusteeProfilesRepository.findOne({
+      where: {
+        and: [
+          {usersId: currentUser.id},
+          {isDeleted: false}
+        ]
+      }
+    });
+
+    if (!trusteeProfile) {
+      throw new HttpErrors.NotFound('Trustee not found');
+    }
+
+    const bankDetailsResponse = await this.bankDetailsService.fetchUserBankAccounts(trusteeProfile.usersId, 'trustee');
+
+    return {
+      success: true,
+      message: 'Bank accounts',
+      bankDetails: bankDetailsResponse.accounts
+    }
+  }
+
+  // fetch bank account
+  @authenticate('jwt')
+  @authorize({roles: ['trustee']})
+  @get('/trustee-profiles/bank-details/{accountId}')
+  async fetchBankDetailsWithId(
+    @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
+    @param.path.string('accountId') accountId: string,
+  ): Promise<{success: boolean; message: string; bankDetails: BankDetails}> {
+    const trusteeProfile = await this.trusteeProfilesRepository.findOne({
+      where: {
+        and: [
+          {usersId: currentUser.id},
+          {isDeleted: false}
+        ]
+      }
+    });
+
+    if (!trusteeProfile) {
+      throw new HttpErrors.NotFound('Trustee not found');
+    }
+
+    const bankDetailsResponse = await this.bankDetailsService.fetchUserBankAccount(accountId);
+
+    return {
+      success: true,
+      message: 'Bank accounts',
+      bankDetails: bankDetailsResponse.account
+    }
+  }
+
+  // fetch authorize signatories...
+  @authenticate('jwt')
+  @authorize({roles: ['trustee']})
+  @get('/trustee-profiles/authorize-signatory')
+  async fetchAuthorizeSignatories(
+    @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
+  ): Promise<{success: boolean; message: string; signatories: AuthorizeSignatories[]}> {
+    const trusteeProfile = await this.trusteeProfilesRepository.findOne({
+      where: {
+        and: [
+          {usersId: currentUser.id},
+          {isDeleted: false}
+        ]
+      }
+    });
+
+    if (!trusteeProfile) {
+      throw new HttpErrors.NotFound('Trustee not found');
+    }
+
+    const signatoriesResponse = await this.authorizeSignatoriesService.fetchAuthorizeSignatories(trusteeProfile.usersId, 'trustee', trusteeProfile.id);
+
+    return {
+      success: true,
+      message: 'Authorize signatories',
+      signatories: signatoriesResponse.signatories
+    }
+  }
+
+  // fetch authorize signatory
+  @authenticate('jwt')
+  @authorize({roles: ['trustee']})
+  @get('/trustee-profiles/authorize-signatory/{signatoryId}')
+  async fetchAuthorizeSignatory(
+    @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
+    @param.path.string('signatoryId') signatoryId: string,
+  ): Promise<{success: boolean; message: string; signatory: AuthorizeSignatories}> {
+    const trusteeProfile = await this.trusteeProfilesRepository.findOne({
+      where: {
+        and: [
+          {usersId: currentUser.id},
+          {isDeleted: false}
+        ]
+      }
+    });
+
+    if (!trusteeProfile) {
+      throw new HttpErrors.NotFound('Trustee not found');
+    }
+
+    const signatoriesResponse = await this.authorizeSignatoriesService.fetchAuthorizeSignatory(signatoryId);
+
+    return {
+      success: true,
+      message: 'Authorize signatory data',
+      signatory: signatoriesResponse.signatory
+    }
+  }
+
+  // fetch documents
+  @authenticate('jwt')
+  @authorize({roles: ['trustee']})
+  @get('/trustee-profiles/documents')
+  async fetchDocuments(
+    @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
+  ): Promise<{success: boolean; message: string; documents: UserUploadedDocuments[]}> {
+    const trusteeProfile = await this.trusteeProfilesRepository.findOne({
+      where: {
+        and: [
+          {usersId: currentUser.id},
+          {isDeleted: false}
+        ]
+      }
+    });
+
+    if (!trusteeProfile) {
+      throw new HttpErrors.NotFound('Trustee not found');
+    }
+
+    const documentsResponse = await this.userUploadDocumentsService.fetchDocumentsWithUser(trusteeProfile.usersId, 'trustee', trusteeProfile.id);
+
+    return {
+      success: true,
+      message: 'Documents data',
+      documents: documentsResponse.documents
+    }
+  }
+
+  // fetch document...
+  @authenticate('jwt')
+  @authorize({roles: ['trustee']})
+  @get('/trustee-profiles/documents/{documentId}')
+  async fetchDocument(
+    @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
+    @param.path.string('documentId') documentId: string,
+  ): Promise<{success: boolean; message: string; document: UserUploadedDocuments}> {
+    const trusteeProfile = await this.trusteeProfilesRepository.findOne({
+      where: {
+        and: [
+          {usersId: currentUser.id},
+          {isDeleted: false}
+        ]
+      }
+    });
+
+    if (!trusteeProfile) {
+      throw new HttpErrors.NotFound('Trustee not found');
+    }
+
+    const documentsResponse = await this.userUploadDocumentsService.fetchDocumentsWithId(documentId);
+
+    return {
+      success: true,
+      message: 'Authorize signatory data',
+      document: documentsResponse.document
+    }
   }
 }

@@ -84,6 +84,59 @@ export class UserUploadedDocumentsService {
     }
   }
 
+  async fetchDocumentsWithUser(usersId: string, identifierId: string, roleValue: string): Promise<{
+    success: boolean;
+    message: string;
+    documents: UserUploadedDocuments[];
+  }> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const documentsData: any = await this.userUploadedDocumentsRepository.find({
+      where: {
+        and: [
+          {isActive: true},
+          {isDeleted: false},
+          {usersId: usersId},
+          {identifierId: identifierId},
+          {roleValue: roleValue},
+        ]
+      },
+      include: [{relation: 'documentsFile', scope: {fields: {id: true, fileUrl: true, fileOriginalName: true}}}]
+    });
+
+    return {
+      success: true,
+      message: 'Documents',
+      documents: documentsData
+    }
+  }
+
+  async fetchDocumentsWithId(documentId: string): Promise<{
+    success: boolean;
+    message: string;
+    document: UserUploadedDocuments;
+  }> {
+    const documentData = await this.userUploadedDocumentsRepository.findOne({
+      where: {
+        and: [
+          {id: documentId},
+          {isActive: true},
+          {isDeleted: false}
+        ]
+      },
+      include: [{relation: 'documentsFile', scope: {fields: {id: true, fileUrl: true, fileOriginalName: true}}}]
+    });
+
+    if (!documentData) {
+      throw new HttpErrors.NotFound('No document found');
+    }
+
+    return {
+      success: true,
+      message: 'Document Data',
+      document: documentData
+    }
+  }
+
   async uploadNewDocument(
     documentObject: Omit<UserUploadedDocuments, 'id'>
   ): Promise<{success: boolean; message: string; uploadedDocument: UserUploadedDocuments}> {

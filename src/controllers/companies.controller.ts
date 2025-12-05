@@ -567,6 +567,36 @@ export class CompaniesController {
     }
   }
 
+  // fetch bank account
+  @authenticate('jwt')
+  @authorize({roles: ['company']})
+  @get('/company-profiles/bank-details/{accountId}')
+  async fetchBankDetailsWithId(
+    @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
+    @param.path.string('accountId') accountId: string,
+  ): Promise<{success: boolean; message: string; bankDetails: BankDetails}> {
+    const companyProfile = await this.companyProfilesRepository.findOne({
+      where: {
+        and: [
+          {usersId: currentUser.id},
+          {isDeleted: false}
+        ]
+      }
+    });
+
+    if (!companyProfile) {
+      throw new HttpErrors.NotFound('Company not found');
+    }
+
+    const bankDetailsResponse = await this.bankDetailsService.fetchUserBankAccount(accountId);
+
+    return {
+      success: true,
+      message: 'Bank accounts',
+      bankDetails: bankDetailsResponse.account
+    }
+  }
+
   // fetch authorize signatories...
   @authenticate('jwt')
   @authorize({roles: ['company']})
@@ -593,6 +623,36 @@ export class CompaniesController {
       success: true,
       message: 'Authorize signatories',
       signatories: signatoriesResponse.signatories
+    }
+  }
+
+  // fetch authorize signatory
+  @authenticate('jwt')
+  @authorize({roles: ['company']})
+  @get('/company-profiles/authorize-signatory/{signatoryId}')
+  async fetchAuthorizeSignatory(
+    @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
+    @param.path.string('signatoryId') signatoryId: string,
+  ): Promise<{success: boolean; message: string; signatory: AuthorizeSignatories}> {
+    const companyProfile = await this.companyProfilesRepository.findOne({
+      where: {
+        and: [
+          {usersId: currentUser.id},
+          {isDeleted: false}
+        ]
+      }
+    });
+
+    if (!companyProfile) {
+      throw new HttpErrors.NotFound('Company not found');
+    }
+
+    const signatoriesResponse = await this.authorizeSignatoriesService.fetchAuthorizeSignatory(signatoryId);
+
+    return {
+      success: true,
+      message: 'Authorize signatory data',
+      signatory: signatoriesResponse.signatory
     }
   }
 

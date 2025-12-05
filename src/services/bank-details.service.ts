@@ -95,6 +95,32 @@ export class BankDetailsService {
     }
   }
 
+  // fetch user bank accounts...
+  async fetchUserBankAccount(accountId: string): Promise<{success: boolean; message: string; account: BankDetails}> {
+    const bankAccount = await this.bankDetailsRepository.findOne({
+      where: {
+        and: [
+          {id: accountId},
+          {isActive: true},
+          {isDeleted: false}
+        ]
+      },
+      include: [
+        {relation: 'bankAccountProof', scope: {fields: {id: true, fileUrl: true, fileOriginalName: true}}}
+      ]
+    });
+
+    if (!bankAccount) {
+      throw new HttpErrors.NotFound('Bank account not found');
+    }
+
+    return {
+      success: true,
+      message: 'Bank accounts',
+      account: bankAccount
+    }
+  }
+
   // update account status
   async updateAccountStatus(accountId: string, status: number, reason: string): Promise<{success: boolean; message: string}> {
     const existingAccount = await this.bankDetailsRepository.findById(accountId);
