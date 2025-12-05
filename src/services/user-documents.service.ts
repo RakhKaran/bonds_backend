@@ -100,7 +100,10 @@ export class UserUploadedDocumentsService {
           {roleValue: roleValue},
         ]
       },
-      include: [{relation: 'documentsFile', scope: {fields: {id: true, fileUrl: true, fileOriginalName: true}}}]
+      include: [
+        {relation: 'documentsFile', scope: {fields: {id: true, fileUrl: true, fileOriginalName: true}}},
+        {relation: 'documents'}
+      ]
     });
 
     return {
@@ -123,7 +126,10 @@ export class UserUploadedDocumentsService {
           {isDeleted: false}
         ]
       },
-      include: [{relation: 'documentsFile', scope: {fields: {id: true, fileUrl: true, fileOriginalName: true}}}]
+      include: [
+        {relation: 'documentsFile', scope: {fields: {id: true, fileUrl: true, fileOriginalName: true}}},
+        {relation: 'documents'}
+      ]
     });
 
     if (!documentData) {
