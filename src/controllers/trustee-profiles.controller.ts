@@ -679,7 +679,7 @@ export class TrusteeProfilesController {
 
   // fetch bank accounts...
   @authenticate('jwt')
-  @authorize({roles: ['trustee', 'super_admin']})
+  @authorize({roles: ['trustee']})
   @get('/trustee-profiles/bank-details')
   async fetchBankDetails(
     @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
@@ -708,7 +708,7 @@ export class TrusteeProfilesController {
 
   // fetch bank account
   @authenticate('jwt')
-  @authorize({roles: ['trustee', 'super_admin']})
+  @authorize({roles: ['trustee']})
   @get('/trustee-profiles/bank-details/{accountId}')
   async fetchBankDetailsWithId(
     @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
@@ -738,7 +738,7 @@ export class TrusteeProfilesController {
 
   // fetch authorize signatories...
   @authenticate('jwt')
-  @authorize({roles: ['trustee', 'super_admin']})
+  @authorize({roles: ['trustee']})
   @get('/trustee-profiles/authorize-signatory')
   async fetchAuthorizeSignatories(
     @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
@@ -767,7 +767,7 @@ export class TrusteeProfilesController {
 
   // fetch authorize signatory
   @authenticate('jwt')
-  @authorize({roles: ['trustee', 'super_admin']})
+  @authorize({roles: ['trustee']})
   @get('/trustee-profiles/authorize-signatory/{signatoryId}')
   async fetchAuthorizeSignatory(
     @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
@@ -797,7 +797,7 @@ export class TrusteeProfilesController {
 
   // fetch documents
   @authenticate('jwt')
-  @authorize({roles: ['trustee', 'super_admin']})
+  @authorize({roles: ['trustee']})
   @get('/trustee-profiles/documents')
   async fetchDocuments(
     @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
@@ -826,7 +826,7 @@ export class TrusteeProfilesController {
 
   // fetch document...
   @authenticate('jwt')
-  @authorize({roles: ['trustee', 'super_admin']})
+  @authorize({roles: ['trustee']})
   @get('/trustee-profiles/documents/{documentId}')
   async fetchDocument(
     @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
