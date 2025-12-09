@@ -1,7 +1,7 @@
 import {authenticate} from '@loopback/authentication';
 import {inject} from '@loopback/core';
 import {repository} from '@loopback/repository';
-import {get, HttpErrors, param} from '@loopback/rest';
+import {get, HttpErrors, param, patch, requestBody} from '@loopback/rest';
 import {authorize} from '../authorization';
 import {AuthorizeSignatories, BankDetails, UserUploadedDocuments} from '../models';
 import {TrusteeProfilesRepository} from '../repositories';
@@ -21,6 +21,7 @@ export class AdminProfilesController {
     private authorizeSignatoriesService: AuthorizeSignatoriesService,
   ) { }
 
+  // ------------------------------------------------Trustee Profile API's-------------------------------------------------
   // fetch bank accounts...
   @authenticate('jwt')
   @authorize({roles: ['super_admin']})
@@ -196,5 +197,98 @@ export class AdminProfilesController {
       message: 'Authorize signatory data',
       document: documentsResponse.document
     }
+  }
+
+  // super admin trustee documents approval API
+  @authenticate('jwt')
+  @authorize({roles: ['super_admin']})
+  @patch('/trustee-profiles/document-verification')
+  async documentVerification(
+    @requestBody({
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            required: ['status', 'documentId'],
+            properties: {
+              status: {type: 'number'},
+              documentId: {type: 'string'},
+              reason: {type: 'string'}
+            }
+          }
+        }
+      }
+    })
+    body: {
+      status: number;
+      documentId: string;
+      reason?: string;
+    }
+  ): Promise<{success: boolean; message: string}> {
+    const result = await this.userUploadDocumentsService.updateDocumentStatus(body.documentId, body.status, body.reason ?? '');
+
+    return result;
+  }
+
+  // super admin trustee bank account approval API
+  @authenticate('jwt')
+  @authorize({roles: ['super_admin']})
+  @patch('/trustee-profiles/bank-account-verification')
+  async bankAccountVerification(
+    @requestBody({
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            required: ['status', 'accountId'],
+            properties: {
+              status: {type: 'number'},
+              accountId: {type: 'string'},
+              reason: {type: 'string'}
+            }
+          }
+        }
+      }
+    })
+    body: {
+      status: number;
+      accountId: string;
+      reason?: string;
+    }
+  ): Promise<{success: boolean; message: string}> {
+    const result = await this.bankDetailsService.updateAccountStatus(body.accountId, body.status, body.reason ?? '');
+
+    return result;
+  }
+
+  // super admin trustee bank signatory approval API
+  @authenticate('jwt')
+  @authorize({roles: ['super_admin']})
+  @patch('/trustee-profiles/authorize-signatory-verification')
+  async authorizeSignatoryVerification(
+    @requestBody({
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            required: ['status', 'signatoryId'],
+            properties: {
+              status: {type: 'number'},
+              signatoryId: {type: 'string'},
+              reason: {type: 'string'}
+            }
+          }
+        }
+      }
+    })
+    body: {
+      status: number;
+      signatoryId: string;
+      reason?: string;
+    }
+  ): Promise<{success: boolean; message: string}> {
+    const result = await this.authorizeSignatoriesService.updateSignatoryStatus(body.signatoryId, body.status, body.reason ?? '');
+
+    return result;
   }
 }

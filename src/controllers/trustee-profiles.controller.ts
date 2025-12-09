@@ -1,7 +1,7 @@
 import {authenticate, AuthenticationBindings} from '@loopback/authentication';
 import {inject} from '@loopback/core';
 import {Filter, IsolationLevel, repository} from '@loopback/repository';
-import {get, HttpErrors, param, patch, post, requestBody} from '@loopback/rest';
+import {get, HttpErrors, param, post, requestBody} from '@loopback/rest';
 import {UserProfile} from '@loopback/security';
 import {authorize} from '../authorization';
 import {AuthorizeSignatories, BankDetails, TrusteeProfiles, UserUploadedDocuments} from '../models';
@@ -516,6 +516,40 @@ export class TrusteeProfilesController {
     }
   }
 
+  // get my trustee profile..
+  @authenticate('jwt')
+  @authorize({roles: ['trustee']})
+  @get('/trustee-profiles/me')
+  async getMyCompanyProfile(
+    @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile
+  ): Promise<{success: boolean; message: string; profile: TrusteeProfiles}> {
+    const trusteeProfile = await this.trusteeProfilesRepository.findOne({
+      where: {
+        and: [
+          {usersId: currentUser.id},
+          {isActive: true},
+          {isDeleted: false}
+        ]
+      },
+      include: [
+        {relation: 'trusteePanCards', scope: {include: [{relation: 'panCardDocument', scope: {fields: {fileUrl: true, id: true, fileOriginalName: true, fileType: true}}}]}},
+        {relation: 'users', scope: {fields: {id: true, phone: true, email: true}}},
+        {relation: 'trusteeEntityTypes'},
+        {relation: 'trusteeLogo', scope: {fields: {id: true, fileOriginalName: true, fileUrl: true}}},
+      ]
+    });
+
+    if (!trusteeProfile) {
+      throw new HttpErrors.NotFound('No trustee profile found');
+    }
+
+    return {
+      success: true,
+      message: 'Company Profile data',
+      profile: trusteeProfile
+    }
+  }
+
   // Get trustee profiles...
   @authenticate('jwt')
   @authorize({roles: ['super_admin']})
@@ -582,99 +616,6 @@ export class TrusteeProfilesController {
       message: 'Trustee Profile',
       data: trustee
     }
-  }
-
-  // super admin trustee documents approval API
-  @authenticate('jwt')
-  @authorize({roles: ['super_admin']})
-  @patch('/trustee-profiles/document-verification')
-  async documentVerification(
-    @requestBody({
-      content: {
-        'application/json': {
-          schema: {
-            type: 'object',
-            required: ['status', 'documentId'],
-            properties: {
-              status: {type: 'number'},
-              documentId: {type: 'string'},
-              reason: {type: 'string'}
-            }
-          }
-        }
-      }
-    })
-    body: {
-      status: number;
-      documentId: string;
-      reason?: string;
-    }
-  ): Promise<{success: boolean; message: string}> {
-    const result = await this.userUploadDocumentsService.updateDocumentStatus(body.documentId, body.status, body.reason ?? '');
-
-    return result;
-  }
-
-  // super admin trustee bank account approval API
-  @authenticate('jwt')
-  @authorize({roles: ['super_admin']})
-  @patch('/trustee-profiles/bank-account-verification')
-  async bankAccountVerification(
-    @requestBody({
-      content: {
-        'application/json': {
-          schema: {
-            type: 'object',
-            required: ['status', 'accountId'],
-            properties: {
-              status: {type: 'number'},
-              accountId: {type: 'string'},
-              reason: {type: 'string'}
-            }
-          }
-        }
-      }
-    })
-    body: {
-      status: number;
-      accountId: string;
-      reason?: string;
-    }
-  ): Promise<{success: boolean; message: string}> {
-    const result = await this.bankDetailsService.updateAccountStatus(body.accountId, body.status, body.reason ?? '');
-
-    return result;
-  }
-
-  // super admin trustee bank signatory approval API
-  @authenticate('jwt')
-  @authorize({roles: ['super_admin']})
-  @patch('/trustee-profiles/authorize-signatory-verification')
-  async authorizeSignatoryVerification(
-    @requestBody({
-      content: {
-        'application/json': {
-          schema: {
-            type: 'object',
-            required: ['status', 'signatoryId'],
-            properties: {
-              status: {type: 'number'},
-              signatoryId: {type: 'string'},
-              reason: {type: 'string'}
-            }
-          }
-        }
-      }
-    })
-    body: {
-      status: number;
-      signatoryId: string;
-      reason?: string;
-    }
-  ): Promise<{success: boolean; message: string}> {
-    const result = await this.authorizeSignatoriesService.updateSignatoryStatus(body.signatoryId, body.status, body.reason ?? '');
-
-    return result;
   }
 
   // fetch bank accounts...
