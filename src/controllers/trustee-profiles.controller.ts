@@ -309,7 +309,7 @@ export class TrusteeProfilesController {
       ...body.bankDetails,
       usersId: body.usersId,
       mode: 1,
-      status: 1,
+      status: 0,
       roleValue: 'trustee'
     });
 
@@ -686,7 +686,7 @@ export class TrusteeProfilesController {
       ...body.bankDetails,
       usersId: trustee.usersId,
       mode: 1,
-      status: 1,
+      status: 0,
       roleValue: 'trustee'
     });
 

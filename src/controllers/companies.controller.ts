@@ -529,7 +529,7 @@ export class CompaniesController {
       ...body.bankDetails,
       usersId: company.usersId,
       mode: 1,
-      status: 1,
+      status: 0,
       roleValue: 'company'
     });
 
