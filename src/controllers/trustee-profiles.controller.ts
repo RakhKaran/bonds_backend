@@ -830,6 +830,101 @@ export class TrusteeProfilesController {
     }
   }
 
+  // for trustee authorize signatories upload
+  @authenticate('jwt')
+  @authorize({roles: ['trustee']})
+  @post('/trustee-profiles/authorize-signatory')
+  async uploadTrusteeAuthorizeSignatory(
+    @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
+    @requestBody({
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            required: ['signatory'],
+            properties: {
+              signatory: {
+                type: 'object',
+                required: ['fullName', 'email', 'phone', 'submittedPanFullName', 'submittedPanNumber', 'submittedDateOfBirth', 'panCardFileId', 'boardResolutionFileId', 'designationType', 'designationValue'],
+                properties: {
+                  fullName: {type: 'string'},
+                  email: {type: 'string'},
+                  phone: {type: 'string'},
+                  extractedPanFullName: {type: 'string'},
+                  extractedPanNumber: {type: 'string'},
+                  extractedDateOfBirth: {type: 'string'},
+                  submittedPanFullName: {type: 'string'},
+                  submittedPanNumber: {type: 'string'},
+                  submittedDateOfBirth: {type: 'string'},
+                  panCardFileId: {type: 'string'},
+                  boardResolutionFileId: {type: 'string'},
+                  designationType: {type: 'string'},
+                  designationValue: {type: 'string'}
+                }
+              }
+            }
+          }
+        }
+      }
+    })
+    body: {
+      signatory: {
+        fullName: string;
+        email: string;
+        phone: string;
+        extractedPanFullName?: string;
+        extractedPanNumber?: string;
+        extractedDateOfBirth?: string;
+        submittedPanFullName: string;
+        submittedPanNumber: string;
+        submittedDateOfBirth: string;
+        panCardFileId: string;
+        boardResolutionFileId: string;
+        designationType: string;
+        designationValue: string;
+      }
+    }
+  ): Promise<{
+    success: boolean;
+    message: string;
+    signatory: AuthorizeSignatories;
+  }> {
+    const tx = await this.trusteeProfilesRepository.dataSource.beginTransaction({IsolationLevel: IsolationLevel.READ_COMMITTED});
+
+    try {
+      const trustee = await this.trusteeProfilesRepository.findOne({
+        where: {
+          and: [
+            {usersId: currentUser.id},
+            {isDeleted: false}
+          ]
+        }
+      },
+        {transaction: tx}
+      );
+
+      if (!trustee) throw new HttpErrors.NotFound("Trustee not found");
+
+      const signatoriesData = new AuthorizeSignatories({
+        ...body.signatory,
+        usersId: trustee.usersId,
+        roleValue: "trustee",
+        identifierId: trustee.id,
+        isActive: true,
+        isDeleted: false
+      });
+
+      const result = await this.authorizeSignatoriesService.createAuthorizeSignatory(signatoriesData);
+
+      await tx.commit();
+      return result;
+
+    } catch (err) {
+      await tx.rollback();
+      throw err;
+    }
+  }
+
   // fetch authorize signatories...
   @authenticate('jwt')
   @authorize({roles: ['trustee']})
