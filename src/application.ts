@@ -13,17 +13,18 @@ import path from 'path';
 import {JWTStrategy} from './authentication-strategy/jwt-strategy';
 import {EmailManagerBindings, FILE_UPLOAD_SERVICE, STORAGE_DIRECTORY} from './keys';
 import {MySequence} from './sequence';
+import {BankDetailsService} from './services/bank-details.service';
 import {DocumentExtractionService} from './services/document-extraction.service';
 import {EmailService} from './services/email.service';
 import {BcryptHasher} from './services/hash.password.bcrypt';
 import {JWTService} from './services/jwt-service';
 import {MediaService} from './services/media.service';
 import {RbacService} from './services/rbac.service';
+import {SessionService} from './services/session.service';
+import {AuthorizeSignatoriesService} from './services/signatories.service';
 import {UserUploadedDocumentsService} from './services/user-documents.service';
 import {MyUserService} from './services/user-service';
-import {BankDetailsService} from './services/bank-details.service';
-import {AuthorizeSignatoriesService} from './services/signatories.service';
-import {SessionService} from './services/session.service';
+import {KycService} from './services/kyc.service';
 
 export {ApplicationConfig};
 
@@ -75,6 +76,7 @@ export class BondsBackendApplication extends BootMixin(
     this.bind('service.bankDetails.service').toClass(BankDetailsService);
     this.bind('services.AuthorizeSignatoriesService.service').toClass(AuthorizeSignatoriesService);
     this.bind('service.session.service').toClass(SessionService);
+    this.bind('service.kyc.service').toClass(KycService);
     this.bind(EmailManagerBindings.SEND_MAIL).toClass(EmailService);
   }
 
