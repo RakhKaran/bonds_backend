@@ -1,7 +1,7 @@
 import {authenticate, AuthenticationBindings} from '@loopback/authentication';
 import {inject} from '@loopback/core';
 import {Filter, IsolationLevel, repository} from '@loopback/repository';
-import {get, HttpErrors, param, post, requestBody} from '@loopback/rest';
+import {get, getModelSchemaRef, HttpErrors, param, patch, post, requestBody} from '@loopback/rest';
 import {UserProfile} from '@loopback/security';
 import {authorize} from '../authorization';
 import {AuthorizeSignatories, BankDetails, TrusteeProfiles, UserUploadedDocuments} from '../models';
@@ -618,6 +618,83 @@ export class TrusteeProfilesController {
     }
   }
 
+  // for trustee bank details upload
+  @authenticate('jwt')
+  @authorize({roles: ['trustee']})
+  @post('/trustee-profiles/bank-details')
+  async uploadBankDetails(
+    @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
+    @requestBody({
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            required: ['bankDetails'],
+            properties: {
+              bankDetails: {
+                type: 'object',
+                required: ['bankName', 'bankShortCode', 'ifscCode', 'branchName', 'bankAddress', 'accountType', 'accountHolderName', 'accountNumber', 'bankAccountProofType', 'bankAccountProofId'],
+                properties: {
+                  bankName: {type: 'string'},
+                  bankShortCode: {type: 'string'},
+                  ifscCode: {type: 'string'},
+                  branchName: {type: 'string'},
+                  bankAddress: {type: 'string'},
+                  accountType: {type: 'number'},
+                  accountHolderName: {type: 'string'},
+                  accountNumber: {type: 'string'},
+                  bankAccountProofType: {type: 'number'},
+                  bankAccountProofId: {type: 'string'}
+                }
+              }
+            }
+          }
+        }
+      }
+    })
+    body: {
+      bankDetails: {
+        bankName: string;
+        bankShortCode: string;
+        ifscCode: string;
+        branchName: string;
+        bankAddress: string;
+        accountType: number;
+        accountHolderName: string;
+        accountNumber: string;
+        bankAccountProofType: number;
+        bankAccountProofId: string;
+      }
+    }
+  ): Promise<{
+    success: boolean;
+    message: string;
+    account: BankDetails;
+  }> {
+    const trustee = await this.trusteeProfilesRepository.findOne({
+      where: {
+        and: [
+          {usersId: currentUser.id},
+          {isDeleted: false}
+        ]
+      }
+    });
+
+    if (!trustee) throw new HttpErrors.NotFound("Trustee not found");
+
+    const bankData = new BankDetails({
+      ...body.bankDetails,
+      usersId: trustee.usersId,
+      mode: 1,
+      status: 1,
+      roleValue: 'trustee'
+    });
+
+    const result = await this.bankDetailsService.createNewBankAccount(bankData);
+
+    return result;
+  }
+
   // fetch bank accounts...
   @authenticate('jwt')
   @authorize({roles: ['trustee']})
@@ -677,6 +754,82 @@ export class TrusteeProfilesController {
     }
   }
 
+  // Update Bank account info for trustee...
+  @authenticate('jwt')
+  @authorize({roles: ['trustee']})
+  @patch('/trustee-profiles/bank-details/{accountId}')
+  async updateBankDetailsWithId(
+    @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
+    @param.path.string('accountId') accountId: string,
+    @requestBody({
+      content: {
+        'application/json': {
+          schema: getModelSchemaRef(BankDetails, {partial: true})
+        }
+      }
+    })
+    accountData: Partial<BankDetails>
+  ): Promise<{success: boolean; message: string; account: BankDetails | null}> {
+    const tx = await this.trusteeProfilesRepository.dataSource.beginTransaction({IsolationLevel: IsolationLevel.READ_COMMITTED});
+    try {
+      const trusteeProfile = await this.trusteeProfilesRepository.findOne({
+        where: {
+          and: [
+            {usersId: currentUser.id},
+            {isDeleted: false}
+          ]
+        }
+      }, {transaction: tx});
+
+      if (!trusteeProfile) {
+        throw new HttpErrors.NotFound('Trustee not found');
+      }
+
+      const bankDetailsResponse = await this.bankDetailsService.updateBankAccountInfo(accountId, accountData, tx);
+
+      await tx.commit();
+
+      return bankDetailsResponse;
+    } catch (error) {
+      await tx.rollback();
+      throw error;
+    }
+  }
+
+  // Change Primary Bank account for trustee...
+  @authenticate('jwt')
+  @authorize({roles: ['trustee']})
+  @patch('/trustee-profiles/bank-details/{accountId}/primary')
+  async updatePrimaryBankAccount(
+    @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
+    @param.path.string('accountId') accountId: string,
+  ): Promise<{success: boolean; message: string}> {
+    const tx = await this.trusteeProfilesRepository.dataSource.beginTransaction({IsolationLevel: IsolationLevel.READ_COMMITTED});
+    try {
+      const trusteeProfile = await this.trusteeProfilesRepository.findOne({
+        where: {
+          and: [
+            {usersId: currentUser.id},
+            {isDeleted: false}
+          ]
+        }
+      }, {transaction: tx});
+
+      if (!trusteeProfile) {
+        throw new HttpErrors.NotFound('Trustee not found');
+      }
+
+      const bankDetailsResponse = await this.bankDetailsService.markAccountAsPrimaryAccount(accountId, tx);
+
+      await tx.commit();
+
+      return bankDetailsResponse;
+    } catch (error) {
+      await tx.rollback();
+      throw error;
+    }
+  }
+
   // fetch authorize signatories...
   @authenticate('jwt')
   @authorize({roles: ['trustee']})
@@ -733,6 +886,48 @@ export class TrusteeProfilesController {
       success: true,
       message: 'Authorize signatory data',
       signatory: signatoriesResponse.signatory
+    }
+  }
+
+  // Update Authorize signatory info for trustee...
+  @authenticate('jwt')
+  @authorize({roles: ['trustee']})
+  @patch('/trustee-profiles/authorize-signatory/{signatoryId}')
+  async updateAuthorizeSignatoryWithId(
+    @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
+    @param.path.string('signatoryId') signatoryId: string,
+    @requestBody({
+      content: {
+        'application/json': {
+          schema: getModelSchemaRef(AuthorizeSignatories, {partial: true})
+        }
+      }
+    })
+    signatoryData: Partial<AuthorizeSignatories>
+  ): Promise<{success: boolean; message: string; signatory: AuthorizeSignatories | null}> {
+    const tx = await this.trusteeProfilesRepository.dataSource.beginTransaction({IsolationLevel: IsolationLevel.READ_COMMITTED});
+    try {
+      const trusteeProfile = await this.trusteeProfilesRepository.findOne({
+        where: {
+          and: [
+            {usersId: currentUser.id},
+            {isDeleted: false}
+          ]
+        }
+      }, {transaction: tx});
+
+      if (!trusteeProfile) {
+        throw new HttpErrors.NotFound('Trustee not found');
+      }
+
+      const signatoryResponse = await this.authorizeSignatoriesService.updateSignatoryInfo(signatoryId, signatoryData, tx);
+
+      await tx.commit();
+
+      return signatoryResponse;
+    } catch (error) {
+      await tx.rollback();
+      throw error;
     }
   }
 

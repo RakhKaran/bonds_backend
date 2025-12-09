@@ -1,7 +1,7 @@
 import {authenticate, AuthenticationBindings} from '@loopback/authentication';
 import {inject} from '@loopback/core';
 import {Filter, IsolationLevel, repository} from '@loopback/repository';
-import {get, HttpErrors, param, patch, post, requestBody} from '@loopback/rest';
+import {get, getModelSchemaRef, HttpErrors, param, patch, post, requestBody} from '@loopback/rest';
 import {UserProfile} from '@loopback/security';
 import {authorize} from '../authorization';
 import {AuthorizeSignatories, BankDetails, CompanyProfiles, UserUploadedDocuments} from '../models';
@@ -261,85 +261,6 @@ export class CompaniesController {
     }
   }
 
-  // for company bank details upload
-  @authenticate('jwt')
-  @authorize({roles: ['company']})
-  @post('/company-profiles/bank-details')
-  async uploadCompanyBankDetails(
-    @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
-    @requestBody({
-      content: {
-        'application/json': {
-          schema: {
-            type: 'object',
-            required: ['bankDetails'],
-            properties: {
-              bankDetails: {
-                type: 'object',
-                required: ['bankName', 'bankShortCode', 'ifscCode', 'branchName', 'bankAddress', 'accountType', 'accountHolderName', 'accountNumber', 'bankAccountProofType', 'bankAccountProofId'],
-                properties: {
-                  bankName: {type: 'string'},
-                  bankShortCode: {type: 'string'},
-                  ifscCode: {type: 'string'},
-                  branchName: {type: 'string'},
-                  bankAddress: {type: 'string'},
-                  accountType: {type: 'number'},
-                  accountHolderName: {type: 'string'},
-                  accountNumber: {type: 'string'},
-                  bankAccountProofType: {type: 'number'},
-                  bankAccountProofId: {type: 'string'}
-                }
-              }
-            }
-          }
-        }
-      }
-    })
-    body: {
-      bankDetails: {
-        bankName: string;
-        bankShortCode: string;
-        ifscCode: string;
-        branchName: string;
-        bankAddress: string;
-        accountType: number;
-        accountHolderName: string;
-        accountNumber: string;
-        bankAccountProofType: number;
-        bankAccountProofId: string;
-      }
-    }
-  ): Promise<{
-    success: boolean;
-    message: string;
-    account: BankDetails;
-  }> {
-    const company = await this.companyProfilesRepository.findOne({
-      where: {
-        and: [
-          {usersId: currentUser.id},
-          {isDeleted: false}
-        ]
-      }
-    });
-
-    console.log('company Data', company);
-
-    if (!company) throw new HttpErrors.NotFound("Company not found");
-
-    const bankData = new BankDetails({
-      ...body.bankDetails,
-      usersId: company.usersId,
-      mode: 1,
-      status: 1,
-      roleValue: 'company'
-    });
-
-    const result = await this.bankDetailsService.createNewBankAccount(bankData);
-
-    return result;
-  }
-
   // for company authorize signatories upload
   // @post('/company-profiles/authorize-signatories')
   // async uploadAuthorizeSignatories(
@@ -538,6 +459,85 @@ export class CompaniesController {
     }
   }
 
+  // for company bank details upload
+  @authenticate('jwt')
+  @authorize({roles: ['company']})
+  @post('/company-profiles/bank-details')
+  async uploadCompanyBankDetails(
+    @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
+    @requestBody({
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            required: ['bankDetails'],
+            properties: {
+              bankDetails: {
+                type: 'object',
+                required: ['bankName', 'bankShortCode', 'ifscCode', 'branchName', 'bankAddress', 'accountType', 'accountHolderName', 'accountNumber', 'bankAccountProofType', 'bankAccountProofId'],
+                properties: {
+                  bankName: {type: 'string'},
+                  bankShortCode: {type: 'string'},
+                  ifscCode: {type: 'string'},
+                  branchName: {type: 'string'},
+                  bankAddress: {type: 'string'},
+                  accountType: {type: 'number'},
+                  accountHolderName: {type: 'string'},
+                  accountNumber: {type: 'string'},
+                  bankAccountProofType: {type: 'number'},
+                  bankAccountProofId: {type: 'string'}
+                }
+              }
+            }
+          }
+        }
+      }
+    })
+    body: {
+      bankDetails: {
+        bankName: string;
+        bankShortCode: string;
+        ifscCode: string;
+        branchName: string;
+        bankAddress: string;
+        accountType: number;
+        accountHolderName: string;
+        accountNumber: string;
+        bankAccountProofType: number;
+        bankAccountProofId: string;
+      }
+    }
+  ): Promise<{
+    success: boolean;
+    message: string;
+    account: BankDetails;
+  }> {
+    const company = await this.companyProfilesRepository.findOne({
+      where: {
+        and: [
+          {usersId: currentUser.id},
+          {isDeleted: false}
+        ]
+      }
+    });
+
+    console.log('company Data', company);
+
+    if (!company) throw new HttpErrors.NotFound("Company not found");
+
+    const bankData = new BankDetails({
+      ...body.bankDetails,
+      usersId: company.usersId,
+      mode: 1,
+      status: 1,
+      roleValue: 'company'
+    });
+
+    const result = await this.bankDetailsService.createNewBankAccount(bankData);
+
+    return result;
+  }
+
   // fetch bank accounts...
   @authenticate('jwt')
   @authorize({roles: ['company']})
@@ -597,6 +597,82 @@ export class CompaniesController {
     }
   }
 
+  // Update Bank account info for company...
+  @authenticate('jwt')
+  @authorize({roles: ['company']})
+  @patch('/company-profiles/bank-details/{accountId}')
+  async updateBankDetailsWithId(
+    @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
+    @param.path.string('accountId') accountId: string,
+    @requestBody({
+      content: {
+        'application/json': {
+          schema: getModelSchemaRef(BankDetails, {partial: true})
+        }
+      }
+    })
+    accountData: Partial<BankDetails>
+  ): Promise<{success: boolean; message: string; account: BankDetails | null}> {
+    const tx = await this.companyProfilesRepository.dataSource.beginTransaction({IsolationLevel: IsolationLevel.READ_COMMITTED});
+    try {
+      const companyProfile = await this.companyProfilesRepository.findOne({
+        where: {
+          and: [
+            {usersId: currentUser.id},
+            {isDeleted: false}
+          ]
+        }
+      }, {transaction: tx});
+
+      if (!companyProfile) {
+        throw new HttpErrors.NotFound('Company not found');
+      }
+
+      const bankDetailsResponse = await this.bankDetailsService.updateBankAccountInfo(accountId, accountData, tx);
+
+      await tx.commit();
+
+      return bankDetailsResponse;
+    } catch (error) {
+      await tx.rollback();
+      throw error;
+    }
+  }
+
+  // Change Primary Bank account for company...
+  @authenticate('jwt')
+  @authorize({roles: ['company']})
+  @patch('/company-profiles/bank-details/{accountId}/primary')
+  async updatePrimaryBankAccount(
+    @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
+    @param.path.string('accountId') accountId: string,
+  ): Promise<{success: boolean; message: string}> {
+    const tx = await this.companyProfilesRepository.dataSource.beginTransaction({IsolationLevel: IsolationLevel.READ_COMMITTED});
+    try {
+      const companyProfile = await this.companyProfilesRepository.findOne({
+        where: {
+          and: [
+            {usersId: currentUser.id},
+            {isDeleted: false}
+          ]
+        }
+      }, {transaction: tx});
+
+      if (!companyProfile) {
+        throw new HttpErrors.NotFound('Company not found');
+      }
+
+      const bankDetailsResponse = await this.bankDetailsService.markAccountAsPrimaryAccount(accountId, tx);
+
+      await tx.commit();
+
+      return bankDetailsResponse;
+    } catch (error) {
+      await tx.rollback();
+      throw error;
+    }
+  }
+
   // fetch authorize signatories...
   @authenticate('jwt')
   @authorize({roles: ['company']})
@@ -653,6 +729,48 @@ export class CompaniesController {
       success: true,
       message: 'Authorize signatory data',
       signatory: signatoriesResponse.signatory
+    }
+  }
+
+  // Update Authorize signatory info for company...
+  @authenticate('jwt')
+  @authorize({roles: ['company']})
+  @patch('/company-profiles/authorize-signatory/{signatoryId}')
+  async updateAuthorizeSignatoryWithId(
+    @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
+    @param.path.string('signatoryId') signatoryId: string,
+    @requestBody({
+      content: {
+        'application/json': {
+          schema: getModelSchemaRef(AuthorizeSignatories, {partial: true})
+        }
+      }
+    })
+    signatoryData: Partial<AuthorizeSignatories>
+  ): Promise<{success: boolean; message: string; signatory: AuthorizeSignatories | null}> {
+    const tx = await this.companyProfilesRepository.dataSource.beginTransaction({IsolationLevel: IsolationLevel.READ_COMMITTED});
+    try {
+      const companyProfile = await this.companyProfilesRepository.findOne({
+        where: {
+          and: [
+            {usersId: currentUser.id},
+            {isDeleted: false}
+          ]
+        }
+      }, {transaction: tx});
+
+      if (!companyProfile) {
+        throw new HttpErrors.NotFound('Company not found');
+      }
+
+      const signatoryResponse = await this.authorizeSignatoriesService.updateSignatoryInfo(signatoryId, signatoryData, tx);
+
+      await tx.commit();
+
+      return signatoryResponse;
+    } catch (error) {
+      await tx.rollback();
+      throw error;
     }
   }
 

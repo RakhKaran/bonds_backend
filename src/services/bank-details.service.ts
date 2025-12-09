@@ -1,14 +1,18 @@
+import {inject} from '@loopback/core';
 import {repository} from '@loopback/repository';
 import {HttpErrors} from '@loopback/rest';
 import axios from 'axios';
 import {BankDetails} from '../models';
 import {BankDetailsRepository} from '../repositories';
+import {MediaService} from './media.service';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export class BankDetailsService {
   constructor(
     @repository(BankDetailsRepository)
     public bankDetailsRepository: BankDetailsRepository,
+    @inject('service.media.service')
+    private mediaService: MediaService
   ) { }
 
   // extract-bank-info from ifsc code
@@ -118,6 +122,103 @@ export class BankDetailsService {
       success: true,
       message: 'Bank accounts',
       account: bankAccount
+    }
+  }
+
+  // update bank account info...
+  async updateBankAccountInfo(accountId: string, accountData: Partial<BankDetails>, tx: any): Promise<{success: boolean; message: string; account: BankDetails | null}> {
+    const bankAccount = await this.bankDetailsRepository.findOne({
+      where: {
+        and: [
+          {id: accountId},
+          {isActive: true},
+          {isDeleted: false}
+        ]
+      },
+      include: [
+        {relation: 'bankAccountProof', scope: {fields: {id: true, fileUrl: true, fileOriginalName: true}}}
+      ]
+    }, {transaction: tx});
+
+    if (!bankAccount) {
+      throw new HttpErrors.NotFound('Bank account not found');
+    }
+
+    if (bankAccount.status === 1) {
+      throw new HttpErrors.BadRequest('Bank account is already approved! please contact admin');
+    }
+
+    await this.bankDetailsRepository.updateById(accountId, {...accountData, status: 0, mode: 1}, {transaction: tx});
+
+    const updatedAccountData = await this.bankDetailsRepository.findOne({
+      where: {
+        and: [
+          {id: accountId},
+          {isActive: true},
+          {isDeleted: false}
+        ]
+      },
+      include: [
+        {relation: 'bankAccountProof', scope: {fields: {id: true, fileUrl: true, fileOriginalName: true}}}
+      ]
+    }, {transaction: tx});
+
+    if (updatedAccountData && (updatedAccountData.bankAccountProofId !== bankAccount.bankAccountProofId)) {
+      await this.mediaService.updateMediaUsedStatus([bankAccount.bankAccountProofId], false);
+      await this.mediaService.updateMediaUsedStatus([updatedAccountData?.bankAccountProofId], true);
+    }
+
+    return {
+      success: true,
+      message: 'Bank Account Updated',
+      account: updatedAccountData
+    }
+  }
+
+  // mark account as primary account...
+  async markAccountAsPrimaryAccount(accountId: string, tx: any): Promise<{success: true; message: string}> {
+    const bankAccount = await this.bankDetailsRepository.findOne({
+      where: {
+        and: [
+          {id: accountId},
+          {isActive: true},
+          {isDeleted: false}
+        ]
+      },
+      include: [
+        {relation: 'bankAccountProof', scope: {fields: {id: true, fileUrl: true, fileOriginalName: true}}}
+      ]
+    }, {transaction: tx});
+
+    if (!bankAccount) {
+      throw new HttpErrors.NotFound('Bank account not found');
+    }
+
+    if (bankAccount.status !== 1) {
+      throw new HttpErrors.BadRequest('Bank account is not approved!');
+    }
+
+    const existingPrimaryAccount = await this.bankDetailsRepository.findOne({
+      where: {
+        and: [
+          {usersId: bankAccount.usersId},
+          {roleValue: bankAccount.roleValue},
+          {isActive: true},
+          {isDeleted: false},
+          {isPrimary: true}
+        ]
+      },
+    }, {transaction: tx});
+
+    await this.bankDetailsRepository.updateById(accountId, {isPrimary: true}, {transaction: tx});
+
+    if (existingPrimaryAccount) {
+      await this.bankDetailsRepository.updateById(existingPrimaryAccount.id, {isPrimary: false}, {transaction: tx});
+    };
+
+    return {
+      success: true,
+      message: "Primary account changed"
     }
   }
 

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import {inject} from '@loopback/core';
 import {repository} from '@loopback/repository';
 import {HttpErrors} from '@loopback/rest';
@@ -170,7 +171,6 @@ export class AuthorizeSignatoriesService {
   }
 
   // create new authorize signatories...
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async createAuthorizeSignatories(signatories: Omit<AuthorizeSignatories, 'id'>[], tx: any): Promise<{
     success: boolean;
     message: string;
@@ -329,5 +329,58 @@ export class AuthorizeSignatoriesService {
     }
 
     throw new HttpErrors.BadRequest('invalid status');
+  }
+
+  // update signatory info...
+  async updateSignatoryInfo(signatoryId: string, signatoryData: Partial<AuthorizeSignatories>, tx: any): Promise<{success: boolean; message: string; signatory: AuthorizeSignatories | null}> {
+    const signatory = await this.authorizeSignatoriesRepository.findOne({
+      where: {
+        and: [
+          {id: signatoryId},
+          {isActive: true},
+          {isDeleted: false}
+        ]
+      },
+    }, {transaction: tx});
+
+    if (!signatory) {
+      throw new HttpErrors.NotFound('Signatory not found');
+    }
+
+    if (signatory.status === 1) {
+      throw new HttpErrors.BadRequest('Signatory is already approved! please contact admin');
+    }
+
+    await this.authorizeSignatoriesRepository.updateById(signatoryId, {...signatoryData, status: 0, mode: 1}, {transaction: tx});
+
+    const updatedSignatoryData = await this.authorizeSignatoriesRepository.findOne({
+      where: {
+        and: [
+          {id: signatoryId},
+          {isActive: true},
+          {isDeleted: false}
+        ]
+      },
+      include: [
+        {relation: 'panCardFile', scope: {fields: {id: true, fileUrl: true, fileOriginalName: true}}},
+        {relation: 'boardResolutionFile', scope: {fields: {id: true, fileUrl: true, fileOriginalName: true}}},
+      ]
+    }, {transaction: tx});
+
+    if (updatedSignatoryData && (updatedSignatoryData.panCardFileId !== signatory.panCardFileId)) {
+      await this.mediaService.updateMediaUsedStatus([signatory.panCardFileId], false);
+      await this.mediaService.updateMediaUsedStatus([updatedSignatoryData.panCardFileId], true);
+    }
+
+    if (updatedSignatoryData && (updatedSignatoryData.boardResolutionFileId !== signatory.boardResolutionFileId)) {
+      await this.mediaService.updateMediaUsedStatus([signatory.boardResolutionFileId], false);
+      await this.mediaService.updateMediaUsedStatus([updatedSignatoryData.boardResolutionFileId], true);
+    }
+
+    return {
+      success: true,
+      message: 'Authorize signatory updated',
+      signatory: updatedSignatoryData
+    }
   }
 }
