@@ -75,7 +75,7 @@ export class CreditRatingsController {
   async find(
     @param.filter(CreditRatings) filter?: Filter<CreditRatings>,
   ): Promise<CreditRatings[]> {
-    return this.creditRatingsRepository.find(filter);
+    return this.creditRatingsRepository.find({...filter, order: ['name ASC']});
   }
 
   @authenticate('jwt')

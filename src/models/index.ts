@@ -27,3 +27,5 @@ export * from './document-screens.model';
 export * from './user-uploaded-documents.model';
 export * from './bank-details.model';
 export * from './authorize-signatories.model';
+export * from './estimation-borrowing-details.model';
+export * from './estimation-priliminary-bond-requirements.model';

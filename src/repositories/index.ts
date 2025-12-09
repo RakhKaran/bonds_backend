@@ -27,3 +27,4 @@ export * from './document-screens.repository';
 export * from './user-uploaded-documents.repository';
 export * from './bank-details.repository';
 export * from './authorize-signatories.repository';
+export * from './estimation-borrowing-details.repository';

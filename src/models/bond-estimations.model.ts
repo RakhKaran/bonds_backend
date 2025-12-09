@@ -1,6 +1,7 @@
-import {Entity, model, property, belongsTo, hasMany} from '@loopback/repository';
+import {belongsTo, Entity, hasMany, model, property} from '@loopback/repository';
 import {CompanyProfiles} from './company-profiles.model';
 import {EstimationCreditRatings} from './estimation-credit-ratings.model';
+import {EstimationBorrowingDetails} from './estimation-borrowing-details.model';
 
 @model({
   settings: {
@@ -100,6 +101,12 @@ export class BondEstimations extends Entity {
   };
 
   @property({
+    type: 'array',
+    itemType: 'string'
+  })
+  currentProgress: string[];
+
+  @property({
     type: 'boolean',
     default: true,
   })
@@ -133,6 +140,9 @@ export class BondEstimations extends Entity {
 
   @hasMany(() => EstimationCreditRatings)
   estimationCreditRatings: EstimationCreditRatings[];
+
+  @hasMany(() => EstimationBorrowingDetails)
+  estimationBorrowingDetails: EstimationBorrowingDetails[];
 
   constructor(data?: Partial<BondEstimations>) {
     super(data);

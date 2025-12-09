@@ -1,4 +1,5 @@
 import {authenticate} from '@loopback/authentication';
+import {inject} from '@loopback/core';
 import {
   Count,
   CountSchema,
@@ -19,11 +20,14 @@ import {
 import {authorize} from '../authorization';
 import {CreditRatingAgencies} from '../models';
 import {CreditRatingAgenciesRepository} from '../repositories';
+import {MediaService} from '../services/media.service';
 
 export class CreditRatingAgenciesController {
   constructor(
     @repository(CreditRatingAgenciesRepository)
     public creditRatingAgenciesRepository: CreditRatingAgenciesRepository,
+    @inject('service.media.service')
+    private mediaService: MediaService
   ) { }
 
   @authenticate('jwt')
@@ -46,7 +50,12 @@ export class CreditRatingAgenciesController {
     })
     creditRatingAgencies: Omit<CreditRatingAgencies, 'id'>,
   ): Promise<CreditRatingAgencies> {
-    return this.creditRatingAgenciesRepository.create(creditRatingAgencies);
+    const createdAgency = await this.creditRatingAgenciesRepository.create(creditRatingAgencies);
+
+    if (createdAgency.logoId) {
+      await this.mediaService.updateMediaUsedStatus([createdAgency.logoId], true)
+    }
+    return createdAgency;
   }
 
   @get('/credit-rating-agencies/count')
@@ -132,7 +141,16 @@ export class CreditRatingAgenciesController {
     })
     creditRatingAgencies: CreditRatingAgencies,
   ): Promise<void> {
+    const agency = await this.creditRatingAgenciesRepository.findById(id);
+
     await this.creditRatingAgenciesRepository.updateById(id, creditRatingAgencies);
+
+    const updatedAgency = await this.creditRatingAgenciesRepository.findById(id);
+
+    if (updatedAgency.logoId && agency.logoId && agency.logoId !== updatedAgency.logoId) {
+      await this.mediaService.updateMediaUsedStatus([agency.logoId], false);
+      await this.mediaService.updateMediaUsedStatus([updatedAgency.logoId], false);
+    }
   }
 
   // @put('/credit-rating-agencies/{id}')

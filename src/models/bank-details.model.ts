@@ -79,10 +79,10 @@ export class BankDetails extends Entity {
     type: 'number',
     required: true,
     jsonSchema: {
-      enum: [0, 1, 2], // 0=passbook, 1=cheque, 2=statement
+      enum: [0, 1], // 0=cheque, 1=statement
     },
   })
-  bankAccountProofType: number; // 0 => passbook 1 => cancelled cheque 2 => statement
+  bankAccountProofType: number; // 0 => cancelled cheque 1 => statement
 
   @belongsTo(() => Media)
   bankAccountProofId: string;

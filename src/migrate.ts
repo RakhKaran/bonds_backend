@@ -38,6 +38,7 @@ export async function migrate(args: string[]) {
       'UserUploadedDocuments',
       'BankDetails',
       'AuthorizeSignatories',
+      'EstimationBorrowingDetails'
     ]
   });
 
