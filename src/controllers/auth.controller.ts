@@ -1367,6 +1367,8 @@ export class AuthController {
           transaction: tx,
         });
 
+        console.log('newTrusteeProfile', newTrusteeProfile);
+
         const newKycApplication = await this.kycApplicationsRepository.create(
           {
             roleValue: registrationSession.roleValue,
