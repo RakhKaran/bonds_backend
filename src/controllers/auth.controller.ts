@@ -720,8 +720,13 @@ export class AuthController {
                     pattern: '^[A-Z]{5}[0-9]{4}[A-Z]{1}$'
                   },
                   extractedDateOfBirth: {
-                    type: 'string',
-                    pattern: '^\\d{4}-\\d{2}-\\d{2}$'
+                    oneOf: [
+                      {
+                        type: 'string',
+                        pattern: '^\\d{4}-\\d{2}-\\d{2}$'
+                      },
+                      {type: 'null'}
+                    ]
                   }
                 }
               },
@@ -766,7 +771,7 @@ export class AuthController {
       extractedPanDetails?: {
         extractedCompanyName?: string;
         extractedPanNumber?: string;
-        extractedDateOfBirth?: string; // yyyy-mm-dd
+        extractedDateOfBirth?: string | null; // yyyy-mm-dd
       };
       submittedPanDetails: {
         submittedCompanyName: string;
@@ -1170,8 +1175,13 @@ export class AuthController {
                     pattern: '^[A-Z]{5}[0-9]{4}[A-Z]{1}$'
                   },
                   extractedDateOfBirth: {
-                    type: 'string',
-                    pattern: '^\\d{4}-\\d{2}-\\d{2}$'
+                    oneOf: [
+                      {
+                        type: 'string',
+                        pattern: '^\\d{4}-\\d{2}-\\d{2}$'
+                      },
+                      {type: 'null'}
+                    ]
                   }
                 }
               },
@@ -1218,7 +1228,7 @@ export class AuthController {
       extractedPanDetails?: {
         extractedTrusteeName?: string;
         extractedPanNumber?: string;
-        extractedDateOfBirth?: string; // yyyy-mm-dd
+        extractedDateOfBirth?: string | null; // yyyy-mm-dd
       };
       submittedPanDetails: {
         submittedTrusteeName: string;
