@@ -1440,6 +1440,7 @@ export class AuthController {
         {
           roleValue: registrationSession.roleValue,
           usersId: newUserProfile.id,
+          identifierId: newTrusteeProfile.id,
           status: 0,
           humanInteraction: false,
           mode: 0,
