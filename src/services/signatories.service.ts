@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {inject} from '@loopback/core';
-import {repository} from '@loopback/repository';
+import {Filter, repository} from '@loopback/repository';
 import {HttpErrors} from '@loopback/rest';
 import {AuthorizeSignatories} from '../models';
 import {AuthorizeSignatoriesRepository} from '../repositories';
@@ -15,7 +15,7 @@ export class AuthorizeSignatoriesService {
   ) { }
 
   // fetch authorize signatories...
-  async fetchAuthorizeSignatories(usersId: string, roleValue: string, identifierId: string): Promise<{
+  async fetchAuthorizeSignatories(usersId: string, roleValue: string, identifierId: string, filter?: Filter<AuthorizeSignatories>): Promise<{
     success: boolean;
     message: string;
     signatories: AuthorizeSignatories[]
@@ -23,6 +23,7 @@ export class AuthorizeSignatoriesService {
     const authorizeSignatories = await this.authorizeSignatoriesRepository.find({
       where: {
         and: [
+          {...filter?.where},
           {usersId: usersId},
           {roleValue: roleValue},
           {identifierId: identifierId},
