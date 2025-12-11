@@ -66,6 +66,7 @@ export class CompaniesController {
   @get('/company-profiles')
   async getCompanyProfiles(
     @param.filter(CompanyProfiles) filter?: Filter<CompanyProfiles>,
+    @param.query.number('status') status?: number,
   ): Promise<{
     success: boolean;
     message: string;
@@ -74,26 +75,38 @@ export class CompaniesController {
       profiles: CompanyProfiles[];
     }
   }> {
+    const kycWhere = (status !== undefined && status !== null) ? {status: status} : {};
     const company = await this.companyProfilesRepository.find({
       ...filter,
       limit: filter?.limit ?? 10,
       skip: filter?.skip ?? 0,
       include: [
         {relation: 'users', scope: {fields: {id: true, phone: true, email: true}}},
-        {relation: 'kycApplications', scope: {fields: {id: true, usersId: true, status: true, mode: true}}},
+        {relation: 'kycApplications', scope: {where: kycWhere, fields: {id: true, usersId: true, status: true, mode: true}}},
         {relation: 'companyEntityType'},
         {relation: 'companySectorType'},
         {relation: 'companyLogoData', scope: {fields: {id: true, fileOriginalName: true, fileUrl: true}}},
       ]
     });
 
-    const totalCount = await this.companyProfilesRepository.count(filter?.where);
+    let totalCount = (await this.companyProfilesRepository.count(filter?.where)).count;
+
+    if (status !== undefined && status !== null) {
+      const companiesWithoutLimit = await this.companyProfilesRepository.find({
+        ...filter,
+        include: [
+          {relation: 'kycApplications', scope: {where: kycWhere, fields: {id: true, usersId: true, status: true, mode: true}}},
+        ]
+      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      totalCount = companiesWithoutLimit.filter((data: any) => data.kycApplications.status === status).length || 0;
+    }
 
     return {
       success: true,
       message: 'Company Profiles',
       data: {
-        count: totalCount.count,
+        count: totalCount,
         profiles: company
       }
     }
@@ -679,6 +692,7 @@ export class CompaniesController {
   @get('/company-profiles/authorize-signatory')
   async fetchAuthorizeSignatories(
     @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
+    @param.filter(AuthorizeSignatories) filter: Filter<AuthorizeSignatories>
   ): Promise<{success: boolean; message: string; signatories: AuthorizeSignatories[]}> {
     const companyProfile = await this.companyProfilesRepository.findOne({
       where: {
@@ -693,7 +707,7 @@ export class CompaniesController {
       throw new HttpErrors.NotFound('Company not found');
     }
 
-    const signatoriesResponse = await this.authorizeSignatoriesService.fetchAuthorizeSignatories(companyProfile.usersId, 'company', companyProfile.id);
+    const signatoriesResponse = await this.authorizeSignatoriesService.fetchAuthorizeSignatories(companyProfile.usersId, 'company', companyProfile.id, filter);
 
     return {
       success: true,

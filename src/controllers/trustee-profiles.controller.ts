@@ -556,6 +556,7 @@ export class TrusteeProfilesController {
   @get('/trustee-profiles')
   async getTrusteeProfiles(
     @param.filter(TrusteeProfiles) filter?: Filter<TrusteeProfiles>,
+    @param.query.number('status') status?: number,
   ): Promise<{
     success: boolean;
     message: string;
@@ -564,25 +565,37 @@ export class TrusteeProfilesController {
       profiles: TrusteeProfiles[];
     }
   }> {
+    const kycWhere = (status !== undefined && status !== null) ? {status: status} : {};
     const trustees = await this.trusteeProfilesRepository.find({
       ...filter,
       limit: filter?.limit ?? 10,
       skip: filter?.skip ?? 0,
       include: [
         {relation: 'users', scope: {fields: {id: true, phone: true, email: true}}},
-        {relation: 'kycApplications', scope: {fields: {id: true, usersId: true, status: true, mode: true}}},
+        {relation: 'kycApplications', scope: {where: kycWhere, fields: {id: true, usersId: true, status: true, mode: true}}},
         {relation: 'trusteeEntityTypes'},
         {relation: 'trusteeLogo', scope: {fields: {id: true, fileOriginalName: true, fileUrl: true}}},
       ]
     });
 
-    const totalCount = await this.trusteeProfilesRepository.count(filter?.where);
+    let totalCount = (await this.trusteeProfilesRepository.count(filter?.where)).count;
+
+    if (status !== undefined && status !== null) {
+      const trusteesWithoutLimit = await this.trusteeProfilesRepository.find({
+        ...filter,
+        include: [
+          {relation: 'kycApplications', scope: {where: kycWhere, fields: {id: true, usersId: true, status: true, mode: true}}},
+        ]
+      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      totalCount = trusteesWithoutLimit.filter((data: any) => data.kycApplications.status === status).length || 0;
+    }
 
     return {
       success: true,
       message: 'Trustee Profiles',
       data: {
-        count: totalCount.count,
+        count: totalCount,
         profiles: trustees
       }
     }
@@ -931,6 +944,7 @@ export class TrusteeProfilesController {
   @get('/trustee-profiles/authorize-signatory')
   async fetchAuthorizeSignatories(
     @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
+    @param.filter(AuthorizeSignatories) filter: Filter<AuthorizeSignatories>
   ): Promise<{success: boolean; message: string; signatories: AuthorizeSignatories[]}> {
     const trusteeProfile = await this.trusteeProfilesRepository.findOne({
       where: {
@@ -945,7 +959,7 @@ export class TrusteeProfilesController {
       throw new HttpErrors.NotFound('Trustee not found');
     }
 
-    const signatoriesResponse = await this.authorizeSignatoriesService.fetchAuthorizeSignatories(trusteeProfile.usersId, 'trustee', trusteeProfile.id);
+    const signatoriesResponse = await this.authorizeSignatoriesService.fetchAuthorizeSignatories(trusteeProfile.usersId, 'trustee', trusteeProfile.id, filter);
 
     return {
       success: true,

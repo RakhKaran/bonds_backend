@@ -1,4 +1,4 @@
-import {Entity, model, property, belongsTo} from '@loopback/repository';
+import {belongsTo, Entity, model, property} from '@loopback/repository';
 import {CompanyProfiles} from './company-profiles.model';
 import {Media} from './media.model';
 
@@ -48,14 +48,6 @@ export class CompanyPanCards extends Entity {
 
   @property({
     type: 'string',
-    jsonSchema: {
-      pattern: '^\\d{4}-\\d{2}-\\d{2}$', // YYYY-MM-DD
-    },
-  })
-  extractedDateOfBirth?: string;
-
-  @property({
-    type: 'string',
     required: true,
     jsonSchema: {
       pattern: '^[A-Z]{5}[0-9]{4}[A-Z]{1}$',
@@ -75,18 +67,6 @@ export class CompanyPanCards extends Entity {
     },
   })
   submittedCompanyName: string;
-
-  @property({
-    type: 'string',
-    required: true,
-    jsonSchema: {
-      pattern: '^\\d{4}-\\d{2}-\\d{2}$',
-      errorMessage: {
-        pattern: 'DOB must be in YYYY-MM-DD format',
-      },
-    },
-  })
-  submittedDateOfBirth: string;
 
   @property({
     type: 'number',

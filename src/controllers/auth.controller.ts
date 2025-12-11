@@ -655,6 +655,198 @@ export class AuthController {
     };
   }
 
+  // -----------------------------------------registration verification Otp's--------------------------
+  @post('/auth/forget-password/send-email-otp')
+  async sendForgetPasswordEmailOtp(
+    @requestBody({
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            required: ['email', 'role'],
+            properties: {
+              email: {type: 'string'},
+              role: {type: 'string'},
+            }
+          }
+        }
+      }
+    })
+    body: {
+      email: string;
+      role: string;
+    }
+  ): Promise<{success: boolean; message: string}> {
+    const user = await this.usersRepository.findOne({
+      where: {
+        and: [
+          {email: body.email},
+          {isDeleted: false}
+        ]
+      }
+    });
+
+    if (!user) {
+      throw new HttpErrors.NotFound("User doesn't exist");
+    }
+
+    if (user && !user.isActive) {
+      throw new HttpErrors.BadRequest("User is not active");
+    }
+
+    const role = await this.rolesRepository.findOne({
+      where: {value: body.role}
+    });
+
+    if (!role) {
+      throw new HttpErrors.BadRequest('Role not found');
+    }
+
+    const isUserRole = await this.userRolesRepository.findOne({
+      where: {usersId: user.id, rolesId: role.id}
+    });
+
+    if (!isUserRole) {
+      throw new HttpErrors.Unauthorized('Unauthorized access');
+    }
+
+    await this.otpRepository.updateAll(
+      {isUsed: true, expiresAt: new Date()},
+      {identifier: body.email, type: 1}
+    );
+
+    const otp = await this.otpRepository.create({
+      otp: '3421',
+      type: 1,
+      identifier: body.email,
+      attempts: 0,
+      isUsed: false,
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000) // 5 min
+    });
+
+    if (!otp) {
+      throw new HttpErrors.InternalServerError(
+        process.env.NODE_ENV === 'dev'
+          ? "Failed to create otp"
+          : "Something went wrong"
+      );
+    }
+
+    return {
+      success: true,
+      message: "OTP sent successfully",
+    };
+  }
+
+  @post('/auth/forget-password/verify-email-otp')
+  async verifyForgetPasswordEmailOtp(
+    @requestBody({
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            required: ['email', 'role', 'otp', 'newPassword'],
+            properties: {
+              email: {type: 'string'},
+              otp: {type: 'string'},
+              role: {type: 'string'},
+              newPassword: {type: 'string'},
+            }
+          }
+        }
+      }
+    })
+    body: {
+      email: string;
+      otp: string;
+      role: string;
+      newPassword: string;
+    }
+  ): Promise<{success: boolean; message: string}> {
+    const user = await this.usersRepository.findOne({
+      where: {
+        and: [
+          {email: body.email},
+          {isDeleted: false}
+        ]
+      }
+    });
+
+    if (!user) {
+      throw new HttpErrors.NotFound("User doesn't exist");
+    }
+
+    if (user && !user.isActive) {
+      throw new HttpErrors.BadRequest("User is not active");
+    }
+
+    const role = await this.rolesRepository.findOne({
+      where: {value: body.role}
+    });
+
+    if (!role) {
+      throw new HttpErrors.BadRequest('Role not found');
+    }
+
+    const isUserRole = await this.userRolesRepository.findOne({
+      where: {usersId: user.id, rolesId: role.id}
+    });
+
+    if (!isUserRole) {
+      throw new HttpErrors.Unauthorized('Unauthorized access');
+    }
+
+    const otpEntry = await this.otpRepository.findOne({
+      where: {
+        identifier: body.email,
+        type: 1,
+        isUsed: false,
+      },
+      order: ['createdAt DESC'],
+    });
+
+    if (!otpEntry) {
+      throw new HttpErrors.BadRequest('OTP expired or not found');
+    }
+
+    if (otpEntry.attempts >= 3) {
+      throw new HttpErrors.BadRequest(
+        'Maximum attempts reached, please request a new OTP',
+      );
+    }
+
+    if (new Date(otpEntry.expiresAt) < new Date()) {
+      await this.otpRepository.updateById(otpEntry.id, {
+        isUsed: true,
+        expiresAt: new Date(),
+      });
+
+      throw new HttpErrors.BadRequest('OTP expired, request a new one');
+    }
+
+    if (otpEntry.otp !== body.otp) {
+      await this.otpRepository.updateById(otpEntry.id, {
+        attempts: otpEntry.attempts + 1,
+      });
+
+      throw new HttpErrors.BadRequest('Invalid OTP');
+    }
+
+    await this.otpRepository.updateById(otpEntry.id, {
+      isUsed: true,
+      expiresAt: new Date(),
+    });
+
+    const hashedPassword = await this.hasher.hashPassword(body.newPassword);
+
+    await this.usersRepository.updateById(user.id, {password: hashedPassword});
+
+    return {
+      success: true,
+      message: 'Password updated'
+    }
+  }
+
   // ------------------------------------------Company Registration API's------------------------------
   @post('/auth/company-registration')
   async companyRegistration(
@@ -705,7 +897,6 @@ export class AuthController {
               cityOfIncorporation: {type: 'string'},
               stateOfIncorporation: {type: 'string'},
               countryOfIncorporation: {type: 'string'},
-
               humanInteraction: {
                 type: 'boolean',
                 default: false
@@ -718,30 +909,17 @@ export class AuthController {
                   extractedPanNumber: {
                     type: 'string',
                     pattern: '^[A-Z]{5}[0-9]{4}[A-Z]{1}$'
-                  },
-                  extractedDateOfBirth: {
-                    oneOf: [
-                      {
-                        type: 'string',
-                        pattern: '^\\d{4}-\\d{2}-\\d{2}$'
-                      },
-                      {type: 'null'}
-                    ]
                   }
                 }
               },
               submittedPanDetails: {
                 type: 'object',
-                required: ['submittedCompanyName', 'submittedPanNumber', 'submittedDateOfBirth'],
+                required: ['submittedCompanyName', 'submittedPanNumber'],
                 properties: {
                   submittedCompanyName: {type: 'string'},
                   submittedPanNumber: {
                     type: 'string',
                     pattern: '^[A-Z]{5}[0-9]{4}[A-Z]{1}$'
-                  },
-                  submittedDateOfBirth: {
-                    type: 'string',
-                    pattern: '^\\d{4}-\\d{2}-\\d{2}$'
                   }
                 }
               },
@@ -771,12 +949,10 @@ export class AuthController {
       extractedPanDetails?: {
         extractedCompanyName?: string;
         extractedPanNumber?: string;
-        extractedDateOfBirth?: string | null; // yyyy-mm-dd
       };
       submittedPanDetails: {
         submittedCompanyName: string;
         submittedPanNumber: string;
-        submittedDateOfBirth: string; // yyyy-mm-dd
       };
       panCardDocumentId: string;
       companySectorTypeId: string;
@@ -899,10 +1075,8 @@ export class AuthController {
       const companyPanData: any = {
         submittedCompanyName: body.submittedPanDetails.submittedCompanyName,
         submittedPanNumber: body.submittedPanDetails.submittedPanNumber,
-        submittedDateOfBirth: body.submittedPanDetails.submittedDateOfBirth,
         extractedCompanyName: body.extractedPanDetails?.extractedCompanyName,
         extractedPanNumber: body.extractedPanDetails?.extractedPanNumber,
-        extractedDateOfBirth: body.extractedPanDetails?.extractedDateOfBirth,
         panCardDocumentId: body.panCardDocumentId,
         mode: body.humanInteraction ? 1 : 0,
         status: 0,
@@ -1031,16 +1205,17 @@ export class AuthController {
         'application/json': {
           schema: {
             type: 'object',
-            required: ['email', 'password'],
+            required: ['email', 'password', 'rememberMe'],
             properties: {
               email: {type: 'string'},
-              password: {type: 'string'}
+              password: {type: 'string'},
+              rememberMe: {type: 'boolean'},
             }
           }
         }
       }
     })
-    body: {email: string; password: string;}
+    body: {email: string; password: string; rememberMe: boolean}
   ): Promise<{success: boolean; message: string; accessToken: string; user: object}> {
     const userData = await this.usersRepository.findOne({
       where: {
@@ -1173,30 +1348,17 @@ export class AuthController {
                   extractedPanNumber: {
                     type: 'string',
                     pattern: '^[A-Z]{5}[0-9]{4}[A-Z]{1}$'
-                  },
-                  extractedDateOfBirth: {
-                    oneOf: [
-                      {
-                        type: 'string',
-                        pattern: '^\\d{4}-\\d{2}-\\d{2}$'
-                      },
-                      {type: 'null'}
-                    ]
                   }
                 }
               },
               submittedPanDetails: {
                 type: 'object',
-                required: ['submittedTrusteeName', 'submittedPanNumber', 'submittedDateOfBirth'],
+                required: ['submittedTrusteeName', 'submittedPanNumber'],
                 properties: {
                   submittedTrusteeName: {type: 'string'},
                   submittedPanNumber: {
                     type: 'string',
                     pattern: '^[A-Z]{5}[0-9]{4}[A-Z]{1}$'
-                  },
-                  submittedDateOfBirth: {
-                    type: 'string',
-                    pattern: '^\\d{4}-\\d{2}-\\d{2}$'
                   }
                 }
               },
@@ -1228,12 +1390,10 @@ export class AuthController {
       extractedPanDetails?: {
         extractedTrusteeName?: string;
         extractedPanNumber?: string;
-        extractedDateOfBirth?: string | null; // yyyy-mm-dd
       };
       submittedPanDetails: {
         submittedTrusteeName: string;
         submittedPanNumber: string;
-        submittedDateOfBirth: string; // yyyy-mm-dd
       };
       panCardDocumentId: string;
       trusteeEntityTypesId: string;
@@ -1347,10 +1507,8 @@ export class AuthController {
       const trusteePanData: any = {
         submittedTrusteeName: body.submittedPanDetails.submittedTrusteeName,
         submittedPanNumber: body.submittedPanDetails.submittedPanNumber,
-        submittedDateOfBirth: body.submittedPanDetails.submittedDateOfBirth,
         extractedTrusteeName: body.extractedPanDetails?.extractedTrusteeName,
         extractedPanNumber: body.extractedPanDetails?.extractedPanNumber,
-        extractedDateOfBirth: body.extractedPanDetails?.extractedDateOfBirth,
         panCardDocumentId: body.panCardDocumentId,
         mode: body.humanInteraction ? 1 : 0,
         status: 0,
@@ -1487,16 +1645,17 @@ export class AuthController {
         'application/json': {
           schema: {
             type: 'object',
-            required: ['email', 'password'],
+            required: ['email', 'password', 'rememberMe'],
             properties: {
               email: {type: 'string'},
-              password: {type: 'string'}
+              password: {type: 'string'},
+              rememberMe: {type: 'boolean'},
             }
           }
         }
       }
     })
-    body: {email: string; password: string;}
+    body: {email: string; password: string; rememberMe: boolean}
   ): Promise<{success: boolean; message: string; accessToken: string; user: object}> {
     const userData = await this.usersRepository.findOne({
       where: {

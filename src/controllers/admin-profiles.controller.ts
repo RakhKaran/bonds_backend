@@ -1,6 +1,6 @@
 import {authenticate} from '@loopback/authentication';
 import {inject} from '@loopback/core';
-import {repository} from '@loopback/repository';
+import {Filter, repository} from '@loopback/repository';
 import {get, HttpErrors, param, patch, requestBody} from '@loopback/rest';
 import {authorize} from '../authorization';
 import {AuthorizeSignatories, BankDetails, UserUploadedDocuments} from '../models';
@@ -89,6 +89,7 @@ export class AdminProfilesController {
   @get('/trustee-profiles/{trusteeId}/authorize-signatory')
   async fetchAuthorizeSignatories(
     @param.path.string('trusteeId') trusteeId: string,
+    @param.filter(AuthorizeSignatories) filter: Filter<AuthorizeSignatories>,
   ): Promise<{success: boolean; message: string; signatories: AuthorizeSignatories[]}> {
     const trusteeProfile = await this.trusteeProfilesRepository.findOne({
       where: {
@@ -103,7 +104,7 @@ export class AdminProfilesController {
       throw new HttpErrors.NotFound('Trustee not found');
     }
 
-    const signatoriesResponse = await this.authorizeSignatoriesService.fetchAuthorizeSignatories(trusteeProfile.usersId, 'trustee', trusteeProfile.id);
+    const signatoriesResponse = await this.authorizeSignatoriesService.fetchAuthorizeSignatories(trusteeProfile.usersId, 'trustee', trusteeProfile.id, filter);
 
     return {
       success: true,
@@ -294,7 +295,6 @@ export class AdminProfilesController {
     return result;
   }
 
-
   // ------------------------------------------------Company Profile API's-------------------------------------------------
   // fetch bank accounts...
   @authenticate('jwt')
@@ -361,6 +361,7 @@ export class AdminProfilesController {
   @get('/company-profiles/{companyId}/authorize-signatory')
   async fetchCompanyAuthorizeSignatories(
     @param.path.string('companyId') companyId: string,
+    @param.filter(AuthorizeSignatories) filter?: Filter<AuthorizeSignatories>,
   ): Promise<{success: boolean; message: string; signatories: AuthorizeSignatories[]}> {
     const companyProfile = await this.companyProfilesRepository.findOne({
       where: {
@@ -375,7 +376,7 @@ export class AdminProfilesController {
       throw new HttpErrors.NotFound('Company not found');
     }
 
-    const signatoriesResponse = await this.authorizeSignatoriesService.fetchAuthorizeSignatories(companyProfile.usersId, 'company', companyProfile.id);
+    const signatoriesResponse = await this.authorizeSignatoriesService.fetchAuthorizeSignatories(companyProfile.usersId, 'company', companyProfile.id, filter);
 
     return {
       success: true,
