@@ -82,7 +82,7 @@ export class CompaniesController {
       ...filter?.where
     };
 
-    if (status) {
+    if (status !== undefined && status !== null) {
       const filteredProfiles = await this.kycService.handleKycApplicationFilter(status, 'company');
 
       rootWhere = {

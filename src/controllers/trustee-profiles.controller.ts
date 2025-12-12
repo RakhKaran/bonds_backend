@@ -572,7 +572,7 @@ export class TrusteeProfilesController {
       ...filter?.where
     };
 
-    if (status) {
+    if (status !== undefined && status !== null) {
       const filteredProfiles = await this.kycService.handleKycApplicationFilter(status, 'trustee');
 
       rootWhere = {
