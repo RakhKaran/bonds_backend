@@ -234,17 +234,18 @@ export class AuthController {
   @authenticate('jwt')
   @get('/auth/me')
   async whoAmI(
-    @inject(AuthenticationBindings.CURRENT_USER) currnetUser: UserProfile,
+    @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
   ): Promise<{}> {
-    console.log(currnetUser);
     const user = await this.usersRepository.findOne({
       where: {
-        id: currnetUser.id,
+        id: currentUser.id,
       },
     });
-    const userData = _.omit(user, 'password');
+    const userData = _.omit(user, 'password, fullName');
     return Promise.resolve({
       ...userData,
+      roles: currentUser?.roles,
+      permissions: currentUser?.permissions || []
     });
   }
 
