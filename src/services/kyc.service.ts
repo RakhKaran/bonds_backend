@@ -153,4 +153,35 @@ export class KycService {
       throw error;
     }
   }
+
+  // filter kyc applications based on status and role
+  async handleKycApplicationFilter(status: number, roleValue: string): Promise<{success: boolean; message: string; profileIds: string[]}> {
+    const kycApplications = await this.kycApplicationsRepository.find({
+      where: {
+        and: [
+          {status},
+          {roleValue},
+          {isActive: true},
+          {isDeleted: false}
+        ]
+      },
+      fields: {identifierId: true, roleValue: true}
+    });
+
+    if (kycApplications.length > 0) {
+      const profileIds = kycApplications.map((application) => application.identifierId) || [];
+
+      return {
+        success: true,
+        message: 'Filtered status based profiles',
+        profileIds
+      }
+    }
+
+    return {
+      success: true,
+      message: 'Filtered status based profiles',
+      profileIds: []
+    }
+  }
 }

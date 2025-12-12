@@ -7,6 +7,7 @@ import {authorize} from '../authorization';
 import {AuthorizeSignatories, BankDetails, TrusteeProfiles, UserUploadedDocuments} from '../models';
 import {KycApplicationsRepository, TrusteeProfilesRepository} from '../repositories';
 import {BankDetailsService} from '../services/bank-details.service';
+import {KycService} from '../services/kyc.service';
 import {SessionService} from '../services/session.service';
 import {AuthorizeSignatoriesService} from '../services/signatories.service';
 import {UserUploadedDocumentsService} from '../services/user-documents.service';
@@ -25,6 +26,8 @@ export class TrusteeProfilesController {
     private authorizeSignatoriesService: AuthorizeSignatoriesService,
     @inject('service.session.service')
     private sessionService: SessionService,
+    @inject('service.kyc.service')
+    private kycService: KycService,
   ) { }
 
   // trustee flow will be like => Basic info, documents, bank details, authorize signatories, bank account details, agreement, verification.
@@ -565,31 +568,33 @@ export class TrusteeProfilesController {
       profiles: TrusteeProfiles[];
     }
   }> {
-    const kycWhere = (status !== undefined && status !== null) ? {status: status} : {};
+    let rootWhere = {
+      ...filter?.where
+    };
+
+    if (status) {
+      const filteredProfiles = await this.kycService.handleKycApplicationFilter(status, 'trustee');
+
+      rootWhere = {
+        ...filter?.where,
+        id: {inq: filteredProfiles.profileIds}
+      }
+    }
+
     const trustees = await this.trusteeProfilesRepository.find({
       ...filter,
+      where: rootWhere,
       limit: filter?.limit ?? 10,
       skip: filter?.skip ?? 0,
       include: [
         {relation: 'users', scope: {fields: {id: true, phone: true, email: true}}},
-        {relation: 'kycApplications', scope: {where: kycWhere, fields: {id: true, usersId: true, status: true, mode: true}}},
+        {relation: 'kycApplications', scope: {fields: {id: true, usersId: true, status: true, mode: true}}},
         {relation: 'trusteeEntityTypes'},
         {relation: 'trusteeLogo', scope: {fields: {id: true, fileOriginalName: true, fileUrl: true}}},
       ]
     });
 
-    let totalCount = (await this.trusteeProfilesRepository.count(filter?.where)).count;
-
-    if (status !== undefined && status !== null) {
-      const trusteesWithoutLimit = await this.trusteeProfilesRepository.find({
-        ...filter,
-        include: [
-          {relation: 'kycApplications', scope: {where: kycWhere, fields: {id: true, usersId: true, status: true, mode: true}}},
-        ]
-      });
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      totalCount = trusteesWithoutLimit?.filter((data: any) => data?.kycApplications?.status === status)?.length || 0;
-    }
+    const totalCount = (await this.trusteeProfilesRepository.count(rootWhere)).count;
 
     return {
       success: true,

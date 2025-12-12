@@ -7,6 +7,7 @@ import {authorize} from '../authorization';
 import {AuthorizeSignatories, BankDetails, CompanyProfiles, UserUploadedDocuments} from '../models';
 import {CompanyProfilesRepository} from '../repositories';
 import {BankDetailsService} from '../services/bank-details.service';
+import {KycService} from '../services/kyc.service';
 import {MediaService} from '../services/media.service';
 import {AuthorizeSignatoriesService} from '../services/signatories.service';
 import {UserUploadedDocumentsService} from '../services/user-documents.service';
@@ -23,6 +24,8 @@ export class CompaniesController {
     private bankDetailsService: BankDetailsService,
     @inject('services.AuthorizeSignatoriesService.service')
     private authorizeSignatoriesService: AuthorizeSignatoriesService,
+    @inject('service.kyc.service')
+    private kycService: KycService,
   ) { }
 
   // get my company profile..
@@ -75,32 +78,34 @@ export class CompaniesController {
       profiles: CompanyProfiles[];
     }
   }> {
-    const kycWhere = (status !== undefined && status !== null) ? {status: status} : {};
+    let rootWhere = {
+      ...filter?.where
+    };
+
+    if (status) {
+      const filteredProfiles = await this.kycService.handleKycApplicationFilter(status, 'company');
+
+      rootWhere = {
+        ...filter?.where,
+        id: {inq: filteredProfiles.profileIds}
+      }
+    };
+
     const company = await this.companyProfilesRepository.find({
       ...filter,
+      where: rootWhere,
       limit: filter?.limit ?? 10,
       skip: filter?.skip ?? 0,
       include: [
         {relation: 'users', scope: {fields: {id: true, phone: true, email: true}}},
-        {relation: 'kycApplications', scope: {where: kycWhere, fields: {id: true, usersId: true, status: true, mode: true}}},
+        {relation: 'kycApplications', scope: {fields: {id: true, usersId: true, status: true, mode: true}}},
         {relation: 'companyEntityType'},
         {relation: 'companySectorType'},
         {relation: 'companyLogoData', scope: {fields: {id: true, fileOriginalName: true, fileUrl: true}}},
       ]
     });
 
-    let totalCount = (await this.companyProfilesRepository.count(filter?.where)).count;
-
-    if (status !== undefined && status !== null) {
-      const companiesWithoutLimit = await this.companyProfilesRepository.find({
-        ...filter,
-        include: [
-          {relation: 'kycApplications', scope: {where: kycWhere, fields: {id: true, usersId: true, status: true, mode: true}}},
-        ]
-      });
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      totalCount = companiesWithoutLimit.filter((data: any) => data.kycApplications.status === status).length || 0;
-    }
+    const totalCount = (await this.companyProfilesRepository.count(filter?.where)).count;
 
     return {
       success: true,
