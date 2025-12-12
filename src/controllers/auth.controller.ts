@@ -127,16 +127,17 @@ export class AuthController {
         'application/json': {
           schema: {
             type: 'object',
-            required: ['email', 'password'],
+            required: ['email', 'password', 'rememberMe'],
             properties: {
               email: {type: 'string'},
-              password: {type: 'string'}
+              password: {type: 'string'},
+              rememberMe: {type: 'boolean'}
             }
           }
         }
       }
     })
-    body: {email: string; password: string;}
+    body: {email: string; password: string; rememberMe: boolean}
   ): Promise<{success: boolean; message: string; accessToken: string; user: object}> {
     const userData = await this.usersRepository.findOne({
       where: {
