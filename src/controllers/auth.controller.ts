@@ -1022,7 +1022,7 @@ export class AuthController {
             phone: registrationSession.phoneNumber,
             email: registrationSession.email,
             password: hashedPassword,
-            isActive: false,
+            isActive: true,
             isDeleted: false,
           },
           {transaction: tx}
@@ -1453,7 +1453,7 @@ export class AuthController {
           phone: registrationSession.phoneNumber,
           email: registrationSession.email,
           password: hashedPassword,
-          isActive: false,
+          isActive: true,
           isDeleted: false,
         },
         {transaction: tx}
