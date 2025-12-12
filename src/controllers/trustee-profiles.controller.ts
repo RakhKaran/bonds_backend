@@ -588,7 +588,7 @@ export class TrusteeProfilesController {
         ]
       });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      totalCount = trusteesWithoutLimit.filter((data: any) => data.kycApplications.status === status).length || 0;
+      totalCount = trusteesWithoutLimit?.filter((data: any) => data?.kycApplications?.status === status)?.length || 0;
     }
 
     return {
