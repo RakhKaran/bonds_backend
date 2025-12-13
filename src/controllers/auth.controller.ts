@@ -183,7 +183,7 @@ export class AuthController {
     };
   }
 
-  // --------------------------------------------Comman Auth API's----------------------------------
+  // --------------------------------------------Comman Auth API's-------------------------------------
   @authenticate('jwt')
   @authorize({roles: ['super_admin', 'company', 'trustee']})
   @post('/auth/update-password')
@@ -249,7 +249,7 @@ export class AuthController {
     });
   }
 
-  // -----------------------------------------registration verification Otp's------------------------
+  // -----------------------------------------registration verification Otp's---------------------------
   @post('/auth/send-phone-otp')
   async sendPhoneOtp(
     @requestBody({
@@ -657,7 +657,7 @@ export class AuthController {
     };
   }
 
-  // -----------------------------------------registration verification Otp's--------------------------
+  // -----------------------------------------registration verification Otp's---------------------------
   @post('/auth/forget-password/send-email-otp')
   async sendForgetPasswordEmailOtp(
     @requestBody({
@@ -1164,6 +1164,7 @@ export class AuthController {
         {
           roleValue: registrationSession.roleValue,
           usersId: newUserProfile.id,
+          identifierId: newCompanyProfile.id,
           status: 2,
           humanInteraction: false,
           mode: 0,
