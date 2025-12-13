@@ -10,6 +10,7 @@ export * from './credit-ratings.controller';
 export * from './document-extraction.controller';
 export * from './document-types.controller';
 export * from './documents.controller';
+export * from './investor-category.controller';
 export * from './kyc.controller';
 export * from './permissions.controller';
 export * from './ping.controller';

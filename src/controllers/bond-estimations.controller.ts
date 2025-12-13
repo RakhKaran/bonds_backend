@@ -1,11 +1,11 @@
 import {authenticate, AuthenticationBindings} from '@loopback/authentication';
 import {inject} from '@loopback/core';
 import {Filter, IsolationLevel, repository} from '@loopback/repository';
-import {get, HttpErrors, param, patch, post, requestBody} from '@loopback/rest';
+import {get, getModelSchemaRef, HttpErrors, param, patch, post, requestBody} from '@loopback/rest';
 import {UserProfile} from '@loopback/security';
 import {authorize} from '../authorization';
-import {BondEstimations} from '../models';
-import {BondEstimationsRepository, CompanyProfilesRepository} from '../repositories';
+import {BondEstimations, EstimationPriliminaryBondRequirements} from '../models';
+import {BondEstimationsRepository, CompanyProfilesRepository, EstimationPriliminaryBondRequirementsRepository} from '../repositories';
 import {MediaService} from '../services/media.service';
 
 export class BondEstimationsController {
@@ -14,6 +14,8 @@ export class BondEstimationsController {
     private bondEstimationsRepository: BondEstimationsRepository,
     @repository(CompanyProfilesRepository)
     private companyProfilesRepository: CompanyProfilesRepository,
+    @repository(EstimationPriliminaryBondRequirementsRepository)
+    private priliminaryBondRequirementsRepository: EstimationPriliminaryBondRequirementsRepository,
     @inject('service.media.service')
     private mediaService: MediaService
   ) { }
@@ -110,6 +112,7 @@ export class BondEstimationsController {
           }
         },
         {relation: 'estimationBorrowingDetails'},
+        {relation: 'estimationPriliminaryBondRequirements'},
       ]
     });
 
@@ -539,6 +542,64 @@ export class BondEstimationsController {
     return {
       success: true,
       message: 'Profitability Details updated',
+    }
+  }
+
+  // Priliminary requirements..
+  @authenticate('jwt')
+  @authorize({roles: ['company']})
+  @patch('/bond-estimations/priliminary-requirements/{applicationId}')
+  async updateBondEstimationPriliminaryRequirement(
+    @param.path.string('applicationId') applicationId: string,
+    @requestBody({
+      content: {
+        'application/json': {
+          schema: getModelSchemaRef(EstimationPriliminaryBondRequirements, {partial: true})
+        }
+      }
+    })
+    priliminaryRequirements: Partial<EstimationPriliminaryBondRequirements>
+  ) {
+    const bondEstimation = await this.bondEstimationsRepository.findById(applicationId);
+
+    if (!bondEstimation) {
+      throw new HttpErrors.NotFound('No bond estimation record found');
+    }
+
+    const newProgress = [
+      ...bondEstimation.currentProgress,
+    ];
+
+    if (!newProgress.includes('bond_priliminary_requirements')) {
+      newProgress.push('bond_priliminary_requirements');
+    }
+
+    const existingPriliminaryRequirement = await this.priliminaryBondRequirementsRepository.findOne({
+      where: {
+        and: [
+          {bondEstimationsId: bondEstimation.id},
+          {isActive: true},
+          {isDeleted: false}
+        ]
+      }
+    });
+
+    if (existingPriliminaryRequirement) {
+      await this.priliminaryBondRequirementsRepository.updateById(existingPriliminaryRequirement.id, priliminaryRequirements);
+
+      return {
+        success: true,
+        message: 'Bond priliminary requirements updated'
+      }
+    }
+
+    await this.priliminaryBondRequirementsRepository.create({...priliminaryRequirements, bondEstimationsId: applicationId});
+
+    await this.bondEstimationsRepository.updateById(bondEstimation.id, {currentProgress: newProgress});
+
+    return {
+      success: true,
+      message: 'Bond priliminary requirements updated'
     }
   }
 }

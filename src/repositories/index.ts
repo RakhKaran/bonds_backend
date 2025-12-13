@@ -28,3 +28,7 @@ export * from './user-uploaded-documents.repository';
 export * from './bank-details.repository';
 export * from './authorize-signatories.repository';
 export * from './estimation-borrowing-details.repository';
+export * from './estimation-priliminary-bond-requirements.repository';
+export * from './investor-category.repository';
+// export * from './document-form-fields.repository';
+// export * from './document-field-options.repository';

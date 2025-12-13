@@ -29,3 +29,6 @@ export * from './bank-details.model';
 export * from './authorize-signatories.model';
 export * from './estimation-borrowing-details.model';
 export * from './estimation-priliminary-bond-requirements.model';
+export * from './investor-category.model';
+// export * from './document-form-fields.model';
+// export * from './document-field-options.model';

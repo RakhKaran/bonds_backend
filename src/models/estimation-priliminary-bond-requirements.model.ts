@@ -1,4 +1,6 @@
-import {Entity, model, property} from '@loopback/repository';
+import {belongsTo, Entity, model, property} from '@loopback/repository';
+import {BondEstimations} from './bond-estimations.model';
+import {InvestorCategory} from './investor-category.model';
 
 @model({
   settings: {
@@ -37,9 +39,15 @@ export class EstimationPriliminaryBondRequirements extends Entity {
 
   @property({
     type: 'number',
+    required: true
+  })
+  roi: number;
+
+  @property({
+    type: 'number',
     required: true,
     jsonSchema: {
-      enum: [0,1,2]   // 0 => 
+      enum: [0, 1, 2]   // 0 => monthly, 1 => quaterly, 2 => anually
     }
   })
   preferedPaymentCycle: number;
@@ -72,6 +80,13 @@ export class EstimationPriliminaryBondRequirements extends Entity {
     type: 'date',
   })
   deletedAt?: Date;
+
+  @belongsTo(() => BondEstimations)
+  bondEstimationsId: string;
+
+  @belongsTo(() => InvestorCategory)
+  investorCategoryId: string;
+
   constructor(data?: Partial<EstimationPriliminaryBondRequirements>) {
     super(data);
   }

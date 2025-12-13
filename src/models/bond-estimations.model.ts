@@ -1,7 +1,8 @@
-import {belongsTo, Entity, hasMany, model, property} from '@loopback/repository';
+import {belongsTo, Entity, hasMany, model, property, hasOne} from '@loopback/repository';
 import {CompanyProfiles} from './company-profiles.model';
 import {EstimationCreditRatings} from './estimation-credit-ratings.model';
 import {EstimationBorrowingDetails} from './estimation-borrowing-details.model';
+import {EstimationPriliminaryBondRequirements} from './estimation-priliminary-bond-requirements.model';
 
 @model({
   settings: {
@@ -143,6 +144,9 @@ export class BondEstimations extends Entity {
 
   @hasMany(() => EstimationBorrowingDetails)
   estimationBorrowingDetails: EstimationBorrowingDetails[];
+
+  @hasOne(() => EstimationPriliminaryBondRequirements)
+  estimationPriliminaryBondRequirements: EstimationPriliminaryBondRequirements;
 
   constructor(data?: Partial<BondEstimations>) {
     super(data);
